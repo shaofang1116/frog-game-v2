@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>🐸 荷塘大冒险 · 青蛙跳荷叶</title>
+  <style>
+    :root {
+      --bg-water: #1b4965;
+      --water-light: #62b6cb;
+      --pad-green: #2d6a4f;
+      --pad-bright: #52b788;
+      --frog-green: #70e000;
+      --accent-pink: #ff4d6d;
+      --accent-gold: #ffb703;
+      --text-dark: #1f2937;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0f2027;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      touch-action: none;
+    }
+    #app-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      background: #143642;
+      box-shadow: 0 0 30px rgba(0,0,0,0.6);
+    }
+    /* 顶部导航与营销横幅 */
+    #top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      background: linear-gradient(to bottom, rgba(15, 32, 39, 0.88), rgba(15, 32, 39, 0));
+      color: #fff;
+    }
+    .badge-author {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      padding: 3px 8px;
+      border-radius: 12px;
+      color: #bee9e8;
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+    }
+    .stats-container {
+      display: flex;
+      gap: 8px;
+    }
+    .stat-pill {
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(6px);
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .stat-pill.time { color: #ffb703; }
+    .stat-pill.score { color: #52b788; }
+    .stat-pill.bombs { color: #ff4d6d; }
+
+    /* 画布区域 */
+    #canvas-container {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 底部触控虚拟操作按键 (移动端) */
+    #controls-layer {
+      position: absolute;
+      bottom: env(safe-area-inset-bottom, 12px);
+      left: 0;
+      width: 100%;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 20;
+      pointer-events: none;
+    }
+    .dpad-container, .actions-container {
+      pointer-events: auto;
+    }
+    /* 十字方向键 */
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 46px);
+      grid-template-rows: repeat(3, 46px);
+      gap: 5px;
+    }
+    .d-btn {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border: 1.5px solid rgba(255, 255, 255, 0.35);
+      border-radius: 12px;
+      color: white;
+      font-size: 18px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.08s, background 0.08s;
+    }
+    .d-btn:active {
+      transform: scale(0.92);
+      background: rgba(82, 183, 136, 0.5);
+    }
+    .d-up { grid-column: 2; grid-row: 1; }
+    .d-left { grid-column: 1; grid-row: 2; }
+    .d-center { grid-column: 2; grid-row: 2; opacity: 0.15; pointer-events: none; }
+    .d-right { grid-column: 3; grid-row: 2; }
+    .d-down { grid-column: 2; grid-row: 3; }
+
+    /* 右侧功能按键 */
+    .actions-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+    .act-btn {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.4);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+      transition: transform 0.08s, filter 0.08s;
+    }
+    .act-btn:active { transform: scale(0.9); }
+    .btn-charge {
+      background: linear-gradient(135deg, #ffb703, #fb8500);
+    }
+    .btn-charge.active {
+      box-shadow: 0 0 16px #ffb703;
+      border-color: #fff;
+    }
+    .btn-bomb {
+      background: linear-gradient(135deg, #e63946, #c1121f);
+    }
+
+    /* 弹窗与遮罩层 (营销展示/结算) */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 20, 26, 0.85);
+      backdrop-filter: blur(12px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      padding: 20px;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 360px;
+      border-radius: 20px;
+      padding: 24px 20px;
+      text-align: center;
+      color: var(--text-dark);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.45);
+      position: relative;
+      animation: popUp 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popUp {
+      from { transform: scale(0.85); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .card-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .card h2 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: #1b4965;
+    }
+    .card-rank {
+      font-size: 15px;
+      color: #fb8500;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .score-banner {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 14px 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .score-item .label { font-size: 11px; color: #6c757d; }
+    .score-item .value { font-size: 22px; font-weight: 800; color: #2d6a4f; }
+
+    .showcase-banner {
+      background: linear-gradient(135deg, #e3f2fd, #e8f5e9);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #334155;
+      text-align: left;
+      line-height: 1.5;
+      margin-bottom: 18px;
+      border-left: 4px solid #52b788;
+    }
+    .showcase-banner strong { color: #1b4965; }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn-main {
+      background: linear-gradient(135deg, #52b788, #2d6a4f);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 13px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(45, 106, 79, 0.35);
+      transition: transform 0.1s;
+    }
+    .btn-main:active { transform: scale(0.97); }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 11px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-secondary:active { background: #e2e8f0; }
+
+    /* 浮动操作提示 (PC) */
+    .pc-tips {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+<div id="app-container">
+  <!-- 顶部状态与品牌标签 -->
+  <div id="top-bar">
+    <div class="badge-author" id="btn-showcase-author">🌱 个人独立展示 · 荷塘</div>
+    <div class="stats-container">
+      <div class="stat-pill time">⏳ <span id="val-time">30</span>s</div>
+      <div class="stat-pill score">🏆 <span id="val-score">0</span></div>
+      <div class="stat-pill bombs">💣 <span id="val-bombs">2</span></div>
+      <div class="badge-author" id="btn-audio-toggle" style="margin-left:4px;">🔊</div>
+    </div>
+  </div>
+
+  <!-- 游戏主画布 -->
+  <div id="canvas-container">
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- 移动端虚拟按键 -->
+  <div id="controls-layer">
+    <div class="dpad-container">
+      <div class="dpad">
+        <div class="d-btn d-up" data-dir="UP">▲</div>
+        <div class="d-btn d-left" data-dir="LEFT">◀</div>
+        <div class="d-btn d-center"></div>
+        <div class="d-btn d-right" data-dir="RIGHT">▶</div>
+        <div class="d-btn d-down" data-dir="DOWN">▼</div>
+      </div>
+    </div>
+    <div class="actions-container">
+      <div class="act-btn btn-charge" id="btn-charge">
+        <span>⚡</span>
+        <span style="font-size:10px;">蓄力2格</span>
+      </div>
+      <div class="act-btn btn-bomb" id="btn-bomb">
+        <span>💣</span>
+        <span style="font-size:10px;">炸弹</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 游戏开始/介绍弹窗 -->
+  <div class="modal-overlay" id="start-modal">
+    <div class="card">
+      <div class="card-badge">HTML5 Canvas · 纯原生实现</div>
+      <h2>🐸 荷塘大冒险</h2>
+      <p style="font-size:13px; color:#64748b; margin-bottom:14px;">轻量级高性能 H5 互动游戏</p>
+      
+      <div class="showcase-banner">
+        <strong>🎯 核心玩法与规则：</strong><br>
+        1. 点击方向或滑动控制青蛙跳上荷叶，避开落水！<br>
+        2. 拾取粉色莲花增加时间和分数。<br>
+        3. 浅绿色荷叶踩中1.5秒后下沉，谨防踏空！<br>
+        4. 警惕水面巡逻的凶猛鳄鱼 🐊，可用 💣 炸退强敌！<br>
+        5. 点击“⚡ 蓄力”按键可进行超远双格越水飞跳！
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-main" id="btn-start-game">🚀 开始冒险</button>
+      </div>
+      <div class="pc-tips">键盘玩家可用 WASD/方向键跳跃，空格蓄力，J/B键扔炸弹</div>
+    </div>
+  </div>
+
+  <!-- 结算与营销分享弹窗 -->
+  <div class="modal-overlay hidden" id="gameover-modal">
+    <div class="card">
+      <div class="card-badge" id="over-badge">冒险结束</div>
+      <h2 id="over-title">落入池塘！</h2>
+      <div class="card-rank" id="over-rank">获得称号：荷塘小跳蛙</div>
+
+      <div class="score-banner">
+        <div class="score-item">
+          <div class="label">本局积分</div>
+          <div class="value" id="res-score">0</div>
+        </div>
+        <div class="score-item">
+          <div class="label">最远前行</div>
+          <div class="value" id="res-distance">0m</div>
+        </div>
+        <div class="score-item">
+          <div class="label">存活时间</div>
+          <div class="value" id="res-time">0s</div>
+        </div>
+        <div class="score-item">
+          <div class="label">历史最高</div>
+          <div class="value" id="res-best">0</div>
+        </div>
+      </div>
+
+      <!-- 营销推广/独立作品展示位 -->
+      <div class="showcase-banner">
+        <strong>💡 创意与技术特性：</strong><br>
+        • 零外部依赖，极速秒开（<50KB 纯单文件打包）<br>
+        • Web Audio 纯代码合成动态音效<br>
+        • 支持微信内分享、触屏与键盘全端自适应
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-main" id="btn-restart">🔄 再来一局</button>
+        <button class="btn-secondary" id="btn-copy-share">📋 复制战绩分享卡片</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关于/作者独立作品展位弹窗 -->
+  <div class="modal-overlay hidden" id="author-modal">
+    <div class="card">
+      <div class="card-badge">作品说明与展示</div>
+      <h2>🌿 荷塘大冒险 H5</h2>
+      <p style="font-size:13px; color:#64748b; margin-bottom:14px;">Designed for Interactive Marketing & Portfolio</p>
+      
+      <div class="showcase-banner" style="font-size:12px;">
+        <strong>📌 项目设计亮点：</strong><br>
+        1. <strong>轻量与极速</strong>：单文件内嵌所有逻辑与矢量程序化绘图，无需加载大型图片和第三方库。<br>
+        2. <strong>智能路径生成</strong>：每行荷叶具备前向连通性保证算法，杜绝死局。<br>
+        3. <strong>动态鳄鱼 AI</strong>：带有警示波纹与捕食冷却，提升紧张度与对抗乐趣。
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-main" id="btn-close-author">返回游戏</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * 荷塘大冒险 (Frog Pond Adventure)
+ * 纯原生 Canvas 2D + Web Audio API 独立轻量实现
+ */
+(function() {
+  'use strict';
+
+  // --- 1. 音效合成器 (Web Audio API 纯代码合成) ---
+  class SoundFX {
+    constructor() {
+      this.ctx = null;
+      this.muted = false;
+    }
+    init() {
+      if (!this.ctx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          this.ctx = new AudioContext();
+        }
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    }
+    playJump(isSuper = false) {
+      if (this.muted || !this.ctx) return;
+      this.init();
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = isSuper ? 'triangle' : 'sine';
+      const now = this.ctx.currentTime;
+      const startFreq = isSuper ? 320 : 260;
+      const endFreq = isSuper ? 780 : 540;
+      osc.frequency.setValueAtTime(startFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.12);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.14);
+    }
+    playSplash() {
+      if (this.muted || !this.ctx) return;
+      this.init();
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      const now = this.ctx.currentTime;
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.linearRampToValueAtTime(40, now + 0.25);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+    playScore() {
+      if (this.muted || !this.ctx) return;
+      this.init();
+      const now = this.ctx.currentTime;
+      [523.25, 659.25, 783.99].forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+        gain.gain.setValueAtTime(0.12, now + idx * 0.05);
+        gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.05 + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now + idx * 0.05);
+        osc.stop(now + idx * 0.05 + 0.12);
+      });
+    }
+    playBomb() {
+      if (this.muted || !this.ctx) return;
+      this.init();
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.exponentialRampToValueAtTime(25, now + 0.45);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    }
+    playGameOver() {
+      if (this.muted || !this.ctx) return;
+      this.init();
+      const now = this.ctx.currentTime;
+      [360, 320, 270, 200].forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+        gain.gain.setValueAtTime(0.15, now + idx * 0.12);
+        gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.12 + 0.18);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now + idx * 0.12);
+        osc.stop(now + idx * 0.12 + 0.18);
+      });
+    }
+  }
+
+  const sfx = new SoundFX();
+
+  // --- 2. 游戏常量与配置 ---
+  const COLS = 7;
+  const VISIBLE_ROWS = 9;
+  const TILE_PAD = 'PAD';
+  const TILE_SINKING = 'SINKING';
+  const TILE_EMPTY = 'EMPTY';
+
+  // --- 3. 游戏核心状态机 ---
+  const Game = {
+    canvas: null,
+    ctx: null,
+    width: 0,
+    height: 0,
+    dpr: 1,
+    tileSize: 48,
+    gridOffsetX: 0,
+    gridOffsetY: 0,
+
+    state: 'START', // START, PLAYING, OVER
+    score: 0,
+    maxDistance: 0,
+    timeLeft: 30,
+    bombs: 2,
+    timerInterval: null,
+    gameStartTime: 0,
+    survivalTime: 0,
+    highScore: parseInt(localStorage.getItem('frog_game_high') || '0', 10),
+
+    cameraY: 0,
+    targetCameraY: 0,
+
+    // 实体集合
+    frog: {
+      gridX: 3,
+      gridY: 0,
+      visualX: 0,
+      visualY: 0,
+      isJumping: false,
+      jumpProgress: 0,
+      startX: 0,
+      startY: 0,
+      targetX: 0,
+      targetY: 0,
+      chargeMode: false,
+      direction: 'UP',
+      alive: true
+    },
+
+    rows: new Map(), // row index -> RowData
+    crocodiles: [], // 鳄鱼实体
+    particles: [],  // 粒子特效
+    floatingTexts: [], // 飘字特效
+
+    init() {
+      this.canvas = document.getElementById('gameCanvas');
+      this.ctx = this.canvas.getContext('2d');
+      this.resize();
+      window.addEventListener('resize', () => this.resize());
+
+      this.bindControls();
+      this.updateUI();
+
+      // 启动主循环
+      let lastTime = performance.now();
+      const loop = (now) => {
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+        this.update(dt);
+        this.render();
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    },
+
+    resize() {
+      const container = document.getElementById('canvas-container');
+      this.width = container.clientWidth;
+      this.height = container.clientHeight;
+      this.dpr = window.devicePixelRatio || 1;
+      this.canvas.width = this.width * this.dpr;
+      this.canvas.height = this.height * this.dpr;
+      this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+
+      this.tileSize = Math.floor(Math.min(this.width / COLS, this.height / VISIBLE_ROWS));
+      this.gridOffsetX = Math.floor((this.width - COLS * this.tileSize) / 2);
+    },
+
+    start() {
+      sfx.init();
+      this.state = 'PLAYING';
+      this.score = 0;
+      this.maxDistance = 0;
+      this.timeLeft = 30;
+      this.bombs = 2;
+      this.cameraY = 0;
+      this.targetCameraY = 0;
+      this.rows.clear();
+      this.crocodiles = [];
+      this.particles = [];
+      this.floatingTexts = [];
+      this.gameStartTime = Date.now();
+
+      // 初始化起始区域 (第 0 行全荷叶安全区)
+      const startRow = {
+        y: 0,
+        tiles: new Array(COLS).fill(TILE_PAD),
+        items: new Array(COLS).fill(null),
+        sinks: new Array(COLS).fill(0)
+      };
+      this.rows.set(0, startRow);
+
+      // 预生成前 15 行
+      for (let r = 1; r <= 15; r++) {
+        this.generateRow(r);
+      }
+
+      // 重置青蛙
+      this.frog.gridX = 3;
+      this.frog.gridY = 0;
+      this.frog.visualX = this.getScreenX(3);
+      this.frog.visualY = this.getScreenY(0);
+      this.frog.isJumping = false;
+      this.frog.chargeMode = false;
+      this.frog.alive = true;
+
+      clearInterval(this.timerInterval);
+      this.timerInterval = setInterval(() => {
+        if (this.state === 'PLAYING') {
+          this.timeLeft--;
+          if (this.timeLeft <= 0) {
+            this.gameOver('时间耗尽！');
+          }
+          this.updateUI();
+        }
+      }, 1000);
+
+      document.getElementById('start-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.add('hidden');
+      this.updateUI();
+    },
+
+    // 智能地图行生成算法（保证前向连通性）
+    generateRow(rowIndex) {
+      if (this.rows.has(rowIndex)) return;
+
+      const prevRow = this.rows.get(rowIndex - 1);
+      const tiles = new Array(COLS).fill(TILE_EMPTY);
+      const items = new Array(COLS).fill(null);
+      const sinks = new Array(COLS).fill(0);
+
+      // 找出前一行的荷叶位置，确保本行在跳跃范围内（上下或对角）至少有1-2个可达荷叶
+      const validPrevCols = [];
+      if (prevRow) {
+        prevRow.tiles.forEach((t, col) => {
+          if (t !== TILE_EMPTY) validPrevCols.push(col);
+        });
+      }
+
+      // 保证通道：选择一个必连通的主落脚点
+      const anchorCol = validPrevCols.length > 0 
+        ? validPrevCols[Math.floor(Math.random() * validPrevCols.length)]
+        : 3;
+      
+      // 允许左右偏移 1 格作为安全跳板
+      const safeCol = Math.max(0, Math.min(COLS - 1, anchorCol + (Math.floor(Math.random() * 3) - 1)));
+      tiles[safeCol] = Math.random() > 0.4 ? TILE_PAD : TILE_SINKING;
+
+      // 随机填充其他荷叶 (约 35% ~ 50% 密度)
+      for (let c = 0; c < COLS; c++) {
+        if (c !== safeCol && Math.random() < 0.42) {
+          tiles[c] = Math.random() > 0.35 ? TILE_PAD : TILE_SINKING;
+        }
+      }
+
+      // 刷新道具：荷花(+50分/+3秒) 或 补给炸弹
+      for (let c = 0; c < COLS; c++) {
+        if (tiles[c] !== TILE_EMPTY) {
+          const rand = Math.random();
+          if (rand < 0.18) {
+            items[c] = 'FLOWER'; // 莲花
+          } else if (rand < 0.24) {
+            items[c] = 'BOMB_ITEM'; // 补给炸弹
+          }
+        }
+      }
+
+      this.rows.set(rowIndex, {
+        y: rowIndex,
+        tiles,
+        items,
+        sinks
+      });
+
+      // 随机生成鳄鱼（在第 3 行以上，且水域比例高时巡逻）
+      if (rowIndex >= 3 && Math.random() < 0.45) {
+        const emptyCols = [];
+        tiles.forEach((t, i) => { if (t === TILE_EMPTY) emptyCols.push(i); });
+        if (emptyCols.length >= 2) {
+          const startCol = emptyCols[Math.floor(Math.random() * emptyCols.length)];
+          this.crocodiles.push({
+            gridY: rowIndex,
+            x: startCol,
+            vx: (Math.random() > 0.5 ? 1 : -1) * (0.8 + Math.random() * 0.6),
+            length: 1.4,
+            warning: false
+          });
+        }
+      }
+    },
+
+    getScreenX(gridX) {
+      return this.gridOffsetX + gridX * this.tileSize + this.tileSize / 2;
+    },
+    getScreenY(gridY) {
+      return this.height - 180 - (gridY * this.tileSize - this.cameraY);
+    },
+
+    // 核心跳跃动作
+    triggerJump(dir) {
+      if (this.state !== 'PLAYING' || this.frog.isJumping || !this.frog.alive) return;
+
+      let dx = 0;
+      let dy = 0;
+      const step = this.frog.chargeMode ? 2 : 1;
+
+      if (dir === 'UP') dy = step;
+      else if (dir === 'DOWN') dy = -step;
+      else if (dir === 'LEFT') dx = -step;
+      else if (dir === 'RIGHT') dx = step;
+
+      const targetX = this.frog.gridX + dx;
+      const targetY = this.frog.gridY + dy;
+
+      // 边界检查
+      if (targetX < 0 || targetX >= COLS || targetY < 0) {
+        // 撞边震动提示
+        this.addFloatingText('边界阻挡', this.frog.visualX, this.frog.visualY - 20, '#ffb703');
+        return;
+      }
+
+      this.frog.isJumping = true;
+      this.frog.jumpProgress = 0;
+      this.frog.direction = dir;
+      this.frog.startX = this.getScreenX(this.frog.gridX);
+      this.frog.startY = this.getScreenY(this.frog.gridY);
+      this.frog.targetX = this.getScreenX(targetX);
+      this.frog.targetY = this.getScreenY(targetY);
+      this.frog.gridX = targetX;
+      this.frog.gridY = targetY;
+
+      sfx.playJump(this.frog.chargeMode);
+
+      // 重置蓄力状态
+      if (this.frog.chargeMode) {
+        this.frog.chargeMode = false;
+        document.getElementById('btn-charge').classList.remove('active');
+      }
+    },
+
+    // 施放炸弹技能
+    throwBomb() {
+      if (this.state !== 'PLAYING' || this.bombs <= 0) return;
+      this.bombs--;
+      this.updateUI();
+      sfx.playBomb();
+
+      // 目标位置：青蛙前方的 3x3 区域
+      const targetRow = this.frog.gridY + 1;
+      const targetCol = this.frog.gridX;
+
+      // 爆炸特效
+      const bx = this.getScreenX(targetCol);
+      const by = this.getScreenY(targetRow);
+      this.createExplosion(bx, by);
+      this.addFloatingText('💥 强力净化！', bx, by, '#ff4d6d');
+
+      // 清理周围 1 格内的鳄鱼
+      this.crocodiles = this.crocodiles.filter(croc => {
+        const dist = Math.hypot(croc.x - targetCol, croc.gridY - targetRow);
+        if (dist <= 1.8) {
+          this.score += 80;
+          this.addFloatingText('+80 击退鳄鱼!', this.getScreenX(croc.x), this.getScreenY(croc.gridY), '#ffb703');
+          return false;
+        }
+        return true;
+      });
+
+      // 将落点处如果是空水域，炸出临时浮木荷叶
+      const row = this.rows.get(targetRow);
+      if (row && row.tiles[targetCol] === TILE_EMPTY) {
+        row.tiles[targetCol] = TILE_PAD;
+      }
+    },
+
+    // 落地结算
+    onFrogLanded() {
+      this.frog.isJumping = false;
+      const r = this.frog.gridY;
+      const c = this.frog.gridX;
+
+      // 更新前行距离与分数
+      if (r > this.maxDistance) {
+        const advanced = r - this.maxDistance;
+        this.maxDistance = r;
+        this.score += advanced * 10;
+        this.addFloatingText(`+${advanced * 10}`, this.frog.visualX, this.frog.visualY - 30, '#52b788');
+        
+        // 生成后续地图
+        for (let i = r + 1; i <= r + 12; i++) {
+          this.generateRow(i);
+        }
+      }
+
+      // 检查荷叶与道具
+      const row = this.rows.get(r);
+      if (!row || row.tiles[c] === TILE_EMPTY) {
+        // 落入水域
+        this.createSplash(this.frog.visualX, this.frog.visualY);
+        sfx.playSplash();
+        this.gameOver('扑通！落入水中！');
+        return;
+      }
+
+      // 捡拾道具
+      if (row.items[c] === 'FLOWER') {
+        row.items[c] = null;
+        this.score += 50;
+        this.timeLeft += 5;
+        sfx.playScore();
+        this.createSparkles(this.frog.visualX, this.frog.visualY);
+        this.addFloatingText('+50 积分 & +5s!', this.frog.visualX, this.frog.visualY - 35, '#ff4d6d');
+      } else if (row.items[c] === 'BOMB_ITEM') {
+        row.items[c] = null;
+        this.bombs = Math.min(this.bombs + 1, 5);
+        sfx.playScore();
+        this.addFloatingText('+1 炸弹补给!', this.frog.visualX, this.frog.visualY - 35, '#ffb703');
+      }
+
+      // 易碎/下沉荷叶启动计时
+      if (row.tiles[c] === TILE_SINKING) {
+        row.sinks[c] = 1.6; // 1.6秒后彻底下沉
+      }
+
+      this.updateUI();
+    },
+
+    // 游戏结束
+    gameOver(reason) {
+      if (this.state === 'OVER') return;
+      this.state = 'OVER';
+      this.frog.alive = false;
+      clearInterval(this.timerInterval);
+      sfx.playGameOver();
+
+      this.survivalTime = Math.floor((Date.now() - this.gameStartTime) / 1000);
+      if (this.score > this.highScore) {
+        this.highScore = this.score;
+        localStorage.setItem('frog_game_high', this.highScore.toString());
+      }
+
+      // 计算荣誉称号 (营销裂变点)
+      let rank = '荷塘萌新蛙';
+      if (this.score >= 500) rank = '👑 荷塘绝影蛙王';
+      else if (this.score >= 300) rank = '⚡ 凌波微步·飞天蛙';
+      else if (this.score >= 150) rank = '🌿 敏捷跳跳达人';
+
+      document.getElementById('over-title').innerText = reason;
+      document.getElementById('over-rank').innerText = `获得称号：${rank}`;
+      document.getElementById('res-score').innerText = this.score;
+      document.getElementById('res-distance').innerText = `${this.maxDistance}m`;
+      document.getElementById('res-time').innerText = `${this.survivalTime}s`;
+      document.getElementById('res-best').innerText = this.highScore;
+
+      setTimeout(() => {
+        document.getElementById('gameover-modal').classList.remove('hidden');
+      }, 400);
+    },
+
+    update(dt) {
+      if (this.state !== 'PLAYING') return;
+
+      // 摄像机平滑跟随青蛙
+      this.targetCameraY = this.frog.gridY * this.tileSize;
+      this.cameraY += (this.targetCameraY - this.cameraY) * 0.12;
+
+      // 青蛙跳跃插值
+      if (this.frog.isJumping) {
+        this.frog.jumpProgress += dt * 4.2; // 跳跃速度
+        if (this.frog.jumpProgress >= 1) {
+          this.frog.jumpProgress = 1;
+          this.frog.visualX = this.frog.targetX;
+          this.frog.visualY = this.frog.targetY;
+          this.onFrogLanded();
+        } else {
+          const p = this.frog.jumpProgress;
+          this.frog.visualX = this.frog.startX + (this.frog.targetX - this.frog.startX) * p;
+          this.frog.visualY = this.frog.startY + (this.frog.targetY - this.frog.startY) * p;
+        }
+      } else {
+        this.frog.visualX = this.getScreenX(this.frog.gridX);
+        this.frog.visualY = this.getScreenY(this.frog.gridY);
+      }
+
+      // 下沉荷叶计时与逻辑
+      this.rows.forEach(row => {
+        row.sinks.forEach((time, col) => {
+          if (time > 0) {
+            row.sinks[col] -= dt;
+            if (row.sinks[col] <= 0) {
+              row.tiles[col] = TILE_EMPTY;
+              row.sinks[col] = 0;
+              // 若青蛙正在该荷叶上，落水
+              if (!this.frog.isJumping && this.frog.gridY === row.y && this.frog.gridX === col) {
+                this.createSplash(this.frog.visualX, this.frog.visualY);
+                sfx.playSplash();
+                this.gameOver('荷叶沉底，落入水中！');
+              }
+            }
+          }
+        });
+      });
+
+      // 鳄鱼巡逻与碰撞判定
+      this.crocodiles.forEach(croc => {
+        croc.x += croc.vx * dt;
+        if (croc.x <= -0.5) {
+          croc.x = -0.5;
+          croc.vx *= -1;
+        } else if (croc.x >= COLS - 0.5) {
+          croc.x = COLS - 0.5;
+          croc.vx *= -1;
+        }
+
+        // 碰撞判定：鳄鱼咬到青蛙
+        if (croc.gridY === this.frog.gridY && !this.frog.isJumping && this.frog.alive) {
+          if (Math.abs(croc.x - this.frog.gridX) < 0.75) {
+            this.gameOver('天哪！被巡逻的鳄鱼扑倒了！');
+          }
+        }
+      });
+
+      // 粒子与飘字更新
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) this.particles.splice(i, 1);
+      }
+      for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = this.floatingTexts[i];
+        ft.y -= 28 * dt;
+        ft.life -= dt;
+        if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+      }
+    },
+
+    // 粒子与视觉特效
+    createSplash(x, y) {
+      for (let i = 0; i < 18; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 40 + Math.random() * 80;
+        this.particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: '#62b6cb',
+          size: 3 + Math.random() * 4,
+          life: 0.45,
+          maxLife: 0.45
+        });
+      }
+    },
+    createSparkles(x, y) {
+      for (let i = 0; i < 12; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 25 + Math.random() * 50;
+        this.particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: '#ffb703',
+          size: 2.5 + Math.random() * 3,
+          life: 0.5,
+          maxLife: 0.5
+        });
+      }
+    },
+    createExplosion(x, y) {
+      for (let i = 0; i < 30; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 60 + Math.random() * 120;
+        this.particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: Math.random() > 0.5 ? '#ff4d6d' : '#ffb703',
+          size: 4 + Math.random() * 5,
+          life: 0.6,
+          maxLife: 0.6
+        });
+      }
+    },
+    addFloatingText(text, x, y, color) {
+      this.floatingTexts.push({
+        text, x, y, color,
+        life: 0.9,
+        maxLife: 0.9
+      });
+    },
+
+    // --- 4. 绘图渲染管线 (Procedural Canvas Vector Drawing) ---
+    render() {
+      const ctx = this.ctx;
+      ctx.clearRect(0, 0, this.width, this.height);
+
+      // 1. 水面背景与微波
+      ctx.fillStyle = '#1b4965';
+      ctx.fillRect(0, 0, this.width, this.height);
+
+      // 绘制水波纹流动效果
+      ctx.strokeStyle = 'rgba(98, 182, 203, 0.18)';
+      ctx.lineWidth = 2;
+      const waveOffset = (Date.now() * 0.02) % 40;
+      for (let y = -40 + waveOffset; y < this.height; y += 38) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.bezierCurveTo(this.width * 0.33, y + 10, this.width * 0.66, y - 10, this.width, y);
+        ctx.stroke();
+      }
+
+      // 2. 绘制荷叶网格
+      this.rows.forEach(row => {
+        const rowY = this.getScreenY(row.y);
+        // 视口剔除
+        if (rowY < -this.tileSize * 2 || rowY > this.height + this.tileSize) return;
+
+        row.tiles.forEach((type, col) => {
+          if (type === TILE_EMPTY) return;
+          const padX = this.getScreenX(col);
+          const isSinking = type === TILE_SINKING;
+          const sinkRatio = row.sinks[col] > 0 ? (row.sinks[col] / 1.6) : 1;
+
+          this.drawLilyPad(ctx, padX, rowY, this.tileSize * 0.44 * sinkRatio, isSinking, row.sinks[col]);
+
+          // 绘制道具
+          if (row.items[col] === 'FLOWER') {
+            this.drawLotusFlower(ctx, padX, rowY);
+          } else if (row.items[col] === 'BOMB_ITEM') {
+            this.drawBombItem(ctx, padX, rowY);
+          }
+        });
+      });
+
+      // 3. 绘制鳄鱼
+      this.crocodiles.forEach(croc => {
+        const crocY = this.getScreenY(croc.gridY);
+        if (crocY >= -50 && crocY <= this.height + 50) {
+          const crocX = this.getScreenX(croc.x);
+          this.drawCrocodile(ctx, crocX, crocY, croc.vx > 0);
+        }
+      });
+
+      // 4. 绘制青蛙
+      this.drawFrog(ctx);
+
+      // 5. 绘制粒子
+      this.particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1.0;
+
+      // 6. 绘制漂浮数字与文字
+      this.floatingTexts.forEach(ft => {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, ft.life / 0.3);
+        ctx.font = 'bold 15px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = ft.color;
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      });
+    },
+
+    // 绘制翠绿荷叶
+    drawLilyPad(ctx, x, y, r, isSinking, sinkTime) {
+      if (r <= 2) return;
+      ctx.save();
+      ctx.translate(x, y);
+
+      // 阴影
+      ctx.fillStyle = 'rgba(10, 30, 45, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(2, 6, r * 1.05, r * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 荷叶本体
+      ctx.fillStyle = isSinking ? '#8cb369' : '#2d6a4f';
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0.25, Math.PI * 2 - 0.25);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // 浅色叶脉边缘
+      ctx.strokeStyle = isSinking ? '#bc4749' : '#52b788';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // 易碎警示倒计时闪烁
+      if (isSinking && sinkTime > 0) {
+        ctx.fillStyle = 'rgba(230, 57, 70, 0.7)';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⏳', 0, 0);
+      }
+      ctx.restore();
+    },
+
+    // 绘制粉色莲花
+    drawLotusFlower(ctx, x, y) {
+      ctx.save();
+      ctx.translate(x, y - 4);
+      const petals = 6;
+      ctx.fillStyle = '#ff4d6d';
+      for (let i = 0; i < petals; i++) {
+        ctx.rotate((Math.PI * 2) / petals);
+        ctx.beginPath();
+        ctx.ellipse(0, 7, 3.5, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#ffb703';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    },
+
+    // 绘制炸弹拾取图标
+    drawBombItem(ctx, x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#222';
+      ctx.beginPath();
+      ctx.arc(0, 2, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffb703';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(2, -4);
+      ctx.lineTo(6, -8);
+      ctx.stroke();
+      ctx.restore();
+    },
+
+    // 绘制凶猛可爱的巡逻鳄鱼
+    drawCrocodile(ctx, x, y, goingRight) {
+      ctx.save();
+      ctx.translate(x, y);
+      if (!goingRight) ctx.scale(-1, 1);
+
+      // 水波警示
+      ctx.strokeStyle = 'rgba(230, 57, 70, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-25, -12, 50, 24);
+
+      // 身体
+      ctx.fillStyle = '#1e441e';
+      ctx.beginPath();
+      ctx.roundRect(-22, -9, 44, 18, [8, 14, 14, 8]);
+      ctx.fill();
+
+      // 鳄鱼背部脊刺
+      ctx.fillStyle = '#2d6a4f';
+      for (let sx = -14; sx <= 14; sx += 8) {
+        ctx.beginPath();
+        ctx.moveTo(sx, -9);
+        ctx.lineTo(sx + 3, -14);
+        ctx.lineTo(sx + 6, -9);
+        ctx.fill();
+      }
+
+      // 黄色冷酷眼睛
+      ctx.fillStyle = '#ffb703';
+      ctx.beginPath();
+      ctx.arc(10, -5, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.fillRect(11, -6, 1.5, 3);
+
+      ctx.restore();
+    },
+
+    // 绘制萌动青蛙（带跳跃形变）
+    drawFrog(ctx) {
+      const f = this.frog;
+      ctx.save();
+      ctx.translate(f.visualX, f.visualY);
+
+      // 跳跃时高度与形变模拟 (抛物线)
+      let jumpElevation = 0;
+      let scaleX = 1;
+      let scaleY = 1;
+      if (f.isJumping) {
+        jumpElevation = Math.sin(f.jumpProgress * Math.PI) * (f.chargeMode ? 32 : 22);
+        scaleX = 1 - Math.sin(f.jumpProgress * Math.PI) * 0.25;
+        scaleY = 1 + Math.sin(f.jumpProgress * Math.PI) * 0.35;
+      }
+      ctx.translate(0, -jumpElevation);
+      ctx.scale(scaleX, scaleY);
+
+      // 青蛙阴影（留在地面）
+      if (jumpElevation > 0) {
+        ctx.save();
+        ctx.translate(0, jumpElevation);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 16 * (1 - jumpElevation / 60), 8 * (1 - jumpElevation / 60), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 身体
+      ctx.fillStyle = f.chargeMode ? '#9ef01a' : '#70e000';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 16, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#38b000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 大眼睛底座
+      ctx.fillStyle = '#70e000';
+      ctx.beginPath();
+      ctx.arc(-8, -10, 6.5, 0, Math.PI * 2);
+      ctx.arc(8, -10, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 眼球眼珠
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-8, -10, 4.5, 0, Math.PI * 2);
+      ctx.arc(8, -10, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#102027';
+      ctx.beginPath();
+      ctx.arc(-8, -10, 2.5, 0, Math.PI * 2);
+      ctx.arc(8, -10, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 可爱腮红
+      ctx.fillStyle = 'rgba(255, 77, 109, 0.45)';
+      ctx.beginPath();
+      ctx.arc(-10, 2, 3, 0, Math.PI * 2);
+      ctx.arc(10, 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 微笑小嘴
+      ctx.strokeStyle = '#004b23';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 2, 4, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+
+      ctx.restore();
+    },
+
+    updateUI() {
+      document.getElementById('val-time').innerText = this.timeLeft;
+      document.getElementById('val-score').innerText = this.score;
+      document.getElementById('val-bombs').innerText = this.bombs;
+    },
+
+    // 交互绑定
+    bindControls() {
+      // 触控 D-Pad
+      document.querySelectorAll('.d-btn').forEach(btn => {
+        const handleDir = (e) => {
+          e.preventDefault();
+          const dir = btn.dataset.dir;
+          if (dir) this.triggerJump(dir);
+        };
+        btn.addEventListener('touchstart', handleDir, { passive: false });
+        btn.addEventListener('mousedown', handleDir);
+      });
+
+      // 蓄力键
+      const btnCharge = document.getElementById('btn-charge');
+      const toggleCharge = (e) => {
+        e.preventDefault();
+        this.frog.chargeMode = !this.frog.chargeMode;
+        if (this.frog.chargeMode) {
+          btnCharge.classList.add('active');
+          this.addFloatingText('⚡ 2格蓄力就绪', this.frog.visualX, this.frog.visualY - 25, '#ffb703');
+        } else {
+          btnCharge.classList.remove('active');
+        }
+      };
+      btnCharge.addEventListener('touchstart', toggleCharge, { passive: false });
+      btnCharge.addEventListener('click', toggleCharge);
+
+      // 炸弹键
+      const btnBomb = document.getElementById('btn-bomb');
+      const handleBomb = (e) => {
+        e.preventDefault();
+        this.throwBomb();
+      };
+      btnBomb.addEventListener('touchstart', handleBomb, { passive: false });
+      btnBomb.addEventListener('click', handleBomb);
+
+      // 键盘控制 (PC)
+      window.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        const key = e.key.toLowerCase();
+        if (['arrowup', 'w'].includes(key)) this.triggerJump('UP');
+        else if (['arrowdown', 's'].includes(key)) this.triggerJump('DOWN');
+        else if (['arrowleft', 'a'].includes(key)) this.triggerJump('LEFT');
+        else if (['arrowright', 'd'].includes(key)) this.triggerJump('RIGHT');
+        else if (key === ' ' || key === 'shift') toggleCharge(e);
+        else if (['j', 'b', 'f'].includes(key)) this.throwBomb();
+      });
+
+      // 滑动屏幕跳跃手势支持 (Mobile Swipe)
+      let touchStartX = 0;
+      let touchStartY = 0;
+      this.canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+      this.canvas.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length > 0) {
+          const dx = e.changedTouches[0].clientX - touchStartX;
+          const dy = e.changedTouches[0].clientY - touchStartY;
+          const absX = Math.abs(dx);
+          const absY = Math.abs(dy);
+          if (Math.max(absX, absY) > 28) {
+            if (absX > absY) {
+              this.triggerJump(dx > 0 ? 'RIGHT' : 'LEFT');
+            } else {
+              this.triggerJump(dy > 0 ? 'DOWN' : 'UP');
+            }
+          }
+        }
+      }, { passive: true });
+
+      // 按钮交互
+      document.getElementById('btn-start-game').addEventListener('click', () => this.start());
+      document.getElementById('btn-restart').addEventListener('click', () => this.start());
+      
+      // 音频开关
+      const btnAudio = document.getElementById('btn-audio-toggle');
+      btnAudio.addEventListener('click', () => {
+        sfx.muted = !sfx.muted;
+        btnAudio.innerText = sfx.muted ? '🔇' : '🔊';
+      });
+
+      // 展示弹窗
+      document.getElementById('btn-showcase-author').addEventListener('click', () => {
+        document.getElementById('author-modal').classList.remove('hidden');
+      });
+      document.getElementById('btn-close-author').addEventListener('click', () => {
+        document.getElementById('author-modal').classList.add('hidden');
+      });
+
+      // 战绩分享复制
+      document.getElementById('btn-copy-share').addEventListener('click', () => {
+        const text = `🐸 我在《荷塘大冒险》中跳出了 ${this.score} 分，勇闯 ${this.maxDistance} 米！获得称号【${document.getElementById('over-rank').innerText}】！快来挑战吧！`;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(() => {
+            alert('🎉 战绩文案已复制到剪贴板，可直接粘贴分享！');
+          });
+        } else {
+          alert(text);
+        }
+      });
+    }
+  };
+
+  window.addEventListener('DOMContentLoaded', () => Game.init());
+})();
+</script>
+</body>
+</html>
