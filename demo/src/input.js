@@ -26,6 +26,30 @@
     };
   }
 
+  function isCompatibilityClick(lastTouchAt, now, suppressionMs = 500) {
+    return lastTouchAt > 0 && now - lastTouchAt < suppressionMs;
+  }
+
+  function createSingleInputBuffer() {
+    let pending = null;
+
+    return {
+      put(jump) {
+        pending = jump;
+      },
+
+      take() {
+        const jump = pending;
+        pending = null;
+        return jump;
+      },
+
+      clear() {
+        pending = null;
+      }
+    };
+  }
+
   function createHoldGesture(options) {
     const thresholdMs = options.thresholdMs || 320;
     const setTimer = options.setTimer || setTimeout;
@@ -37,46 +61,60 @@
     let direction = null;
     let timerId = null;
     let isLongPress = false;
+    let activeTouchId;
 
     function reset(showedPreview) {
       if (timerId !== null) clearTimer(timerId);
       timerId = null;
       direction = null;
       isLongPress = false;
+      activeTouchId = undefined;
       if (showedPreview) onPreviewEnd();
     }
 
     return {
-      start(nextDirection) {
-        if (!nextDirection || direction !== null) return;
+      start(nextDirection, touchId) {
+        if (!nextDirection || direction !== null) return false;
 
         direction = nextDirection;
+        activeTouchId = touchId;
         timerId = setTimer(() => {
           timerId = null;
           isLongPress = true;
           onPreview(direction, 2);
         }, thresholdMs);
+        return true;
       },
 
-      end() {
-        if (direction === null) return;
+      end(touchId) {
+        if (direction === null || touchId !== activeTouchId) return false;
 
         const jumpDirection = direction;
         const steps = isLongPress ? 2 : 1;
         const showedPreview = isLongPress;
         reset(showedPreview);
         onJump(jumpDirection, steps);
+        return true;
       },
 
-      cancel() {
-        if (direction === null) return;
+      cancel(touchId) {
+        if (direction === null || touchId !== activeTouchId) return false;
         reset(isLongPress);
+        return true;
+      },
+
+      cancelActive() {
+        if (direction === null) return false;
+        reset(isLongPress);
+        return true;
       }
     };
   }
 
   return {
     getKeyboardJump,
+    isCompatibilityClick,
+    createSingleInputBuffer,
     createHoldGesture
   };
 });

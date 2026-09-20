@@ -582,6 +582,7 @@
     cameraY: 0,
     targetCameraY: 0,
     jumpPreview: null,
+    inputBuffer: FrogInput.createSingleInputBuffer(),
 
     // 实体集合
     frog: {
@@ -649,6 +650,7 @@
       this.cameraY = 0;
       this.targetCameraY = 0;
       this.jumpPreview = null;
+      this.inputBuffer.clear();
       this.rows.clear();
       this.crocodiles = [];
       this.particles = [];
@@ -798,9 +800,15 @@
 
     // 核心跳跃动作
     triggerJump(dir, steps = 1) {
-      if (this.state !== 'PLAYING' || this.frog.isJumping || !this.frog.alive) return;
+      if (this.state !== 'PLAYING' || !this.frog.alive) return;
 
       const jumpSteps = steps === 2 ? 2 : 1;
+      const jump = { direction: dir, steps: jumpSteps };
+      if (this.frog.isJumping) {
+        this.inputBuffer.put(jump);
+        return;
+      }
+
       const target = this.getJumpTarget(dir, jumpSteps);
 
       // 边界检查
@@ -911,6 +919,11 @@
       const journeyCompleted = this.updateJourneyProgress();
       this.updateUI();
       if (journeyCompleted) return;
+
+      const nextJump = this.inputBuffer.take();
+      if (this.state === 'PLAYING' && this.frog.alive && nextJump) {
+        this.triggerJump(nextJump.direction, nextJump.steps);
+      }
     },
 
     updateJourneyProgress() {
@@ -930,6 +943,7 @@
 
     // 游戏结束
     gameOver(reason, completed = false) {
+      this.inputBuffer.clear();
       if (this.state === 'OVER') return;
       this.state = 'OVER';
       this.frog.alive = false;
@@ -1392,6 +1406,18 @@
         onJump: (dir, steps) => this.triggerJump(dir, steps)
       });
       let lastTouchAt = 0;
+      const cancelActiveTouch = () => {
+        if (holdGesture.cancelActive()) {
+          lastTouchAt = Date.now();
+        }
+        this.inputBuffer.clear();
+      };
+
+      window.addEventListener('blur', cancelActiveTouch);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) cancelActiveTouch();
+      });
+      window.addEventListener('orientationchange', cancelActiveTouch);
 
       // 触控 D-Pad
       document.querySelectorAll('.d-btn').forEach(btn => {
@@ -1401,28 +1427,62 @@
         btn.addEventListener('touchstart', (e) => {
           e.preventDefault();
           lastTouchAt = Date.now();
-          holdGesture.start(dir);
+          const touch = e.changedTouches[0];
+          if (touch) holdGesture.start(dir, touch.identifier);
+        }, { passive: false });
+        btn.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          const rect = btn.getBoundingClientRect();
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            const isOutside = touch.clientX < rect.left || touch.clientX > rect.right ||
+              touch.clientY < rect.top || touch.clientY > rect.bottom;
+            if (isOutside && holdGesture.cancel(touch.identifier)) {
+              lastTouchAt = Date.now();
+              this.inputBuffer.clear();
+              break;
+            }
+          }
         }, { passive: false });
         btn.addEventListener('touchend', (e) => {
           e.preventDefault();
           lastTouchAt = Date.now();
-          holdGesture.end();
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (holdGesture.end(e.changedTouches[i].identifier)) break;
+          }
         }, { passive: false });
-        btn.addEventListener('touchcancel', () => holdGesture.cancel());
+        btn.addEventListener('touchcancel', (e) => {
+          e.preventDefault();
+          lastTouchAt = Date.now();
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (holdGesture.cancel(e.changedTouches[i].identifier)) {
+              this.inputBuffer.clear();
+              break;
+            }
+          }
+        }, { passive: false });
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-          if (Date.now() - lastTouchAt >= 500) this.triggerJump(dir, 1);
+          if (!FrogInput.isCompatibilityClick(lastTouchAt, Date.now())) {
+            this.triggerJump(dir, 1);
+          }
         });
       });
 
       // 炸弹键
       const btnBomb = document.getElementById('btn-bomb');
-      const handleBomb = (e) => {
+      let lastBombTouchAt = 0;
+      btnBomb.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        lastBombTouchAt = Date.now();
         this.throwBomb();
-      };
-      btnBomb.addEventListener('touchstart', handleBomb, { passive: false });
-      btnBomb.addEventListener('click', handleBomb);
+      }, { passive: false });
+      btnBomb.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!FrogInput.isCompatibilityClick(lastBombTouchAt, Date.now())) {
+          this.throwBomb();
+        }
+      });
 
       // 键盘控制 (PC)
       window.addEventListener('keydown', (e) => {
