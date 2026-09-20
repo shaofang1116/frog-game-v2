@@ -96,6 +96,28 @@ test('page interruptions cancel the active D-Pad gesture and buffered input', ()
   );
 });
 
+test('the Canvas binds the swipe hold policy and shares global cancellation', () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
+  const cancelActiveTouch = html.match(
+    /const cancelActiveTouch = \(\) => \{([\s\S]*?)\n\s*\};/
+  );
+
+  assert.match(html, /const swipeGesture = FrogInput\.createSwipeHoldGesture\(\{/);
+  assert.match(
+    html,
+    /swipeGesture\.start\(touch\.identifier,\s*touch\.clientX,\s*touch\.clientY\)/
+  );
+  assert.match(
+    html,
+    /swipeGesture\.move\(touch\.identifier,\s*touch\.clientX,\s*touch\.clientY\)/
+  );
+  assert.match(html, /swipeGesture\.end\(e\.changedTouches\[i\]\.identifier\)/);
+  assert.match(html, /swipeGesture\.cancel\(e\.changedTouches\[i\]\.identifier\)/);
+  assert.ok(cancelActiveTouch);
+  assert.match(cancelActiveTouch[1], /swipeGesture\.cancelActive\(\)/);
+  assert.doesNotMatch(html, /touchStart[XY]/);
+});
+
 test('the bomb touch stays independent and suppresses its compatibility click', () => {
   const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
 

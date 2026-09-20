@@ -1405,11 +1405,20 @@
         onPreviewEnd: () => this.clearJumpPreview(),
         onJump: (dir, steps) => this.triggerJump(dir, steps)
       });
+      const swipeGesture = FrogInput.createSwipeHoldGesture({
+        swipeThreshold: 28,
+        stableRadius: 12,
+        thresholdMs: 320,
+        onPreview: (dir, steps) => this.showJumpPreview(dir, steps),
+        onPreviewEnd: () => this.clearJumpPreview(),
+        onJump: (dir, steps) => this.triggerJump(dir, steps)
+      });
       let lastTouchAt = 0;
       const cancelActiveTouch = () => {
         if (holdGesture.cancelActive()) {
           lastTouchAt = Date.now();
         }
+        swipeGesture.cancelActive();
         this.inputBuffer.clear();
       };
 
@@ -1497,30 +1506,36 @@
         }
       });
 
-      // 滑动屏幕跳跃手势支持 (Mobile Swipe)
-      let touchStartX = 0;
-      let touchStartY = 0;
+      // 滑动屏幕蓄力跳跃手势支持 (Mobile Swipe)
       this.canvas.addEventListener('touchstart', (e) => {
-        if (e.touches.length > 0) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        if (touch) {
+          swipeGesture.start(touch.identifier, touch.clientX, touch.clientY);
         }
-      }, { passive: true });
+      }, { passive: false });
+      this.canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          if (swipeGesture.move(touch.identifier, touch.clientX, touch.clientY)) break;
+        }
+      }, { passive: false });
       this.canvas.addEventListener('touchend', (e) => {
-        if (e.changedTouches.length > 0) {
-          const dx = e.changedTouches[0].clientX - touchStartX;
-          const dy = e.changedTouches[0].clientY - touchStartY;
-          const absX = Math.abs(dx);
-          const absY = Math.abs(dy);
-          if (Math.max(absX, absY) > 28) {
-            if (absX > absY) {
-              this.triggerJump(dx > 0 ? 'RIGHT' : 'LEFT');
-            } else {
-              this.triggerJump(dy > 0 ? 'DOWN' : 'UP');
-            }
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (swipeGesture.end(e.changedTouches[i].identifier)) break;
+        }
+      }, { passive: false });
+      this.canvas.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (swipeGesture.cancel(e.changedTouches[i].identifier)) {
+            this.inputBuffer.clear();
+            break;
           }
         }
-      }, { passive: true });
+      }, { passive: false });
 
       // 按钮交互
       document.getElementById('btn-start-game').addEventListener('click', () => this.start());
