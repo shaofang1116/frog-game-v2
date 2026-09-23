@@ -1,6 +1,6 @@
 # Canvas Swipe Charge Instability
 
-Status: `FIXED` (code layer; pending public-device verification)
+Status: `VERIFIED` (public-device operation test passed)
 Date: 2026-09-22
 Scope: Canvas blank-area swipe-and-hold only. D-Pad behavior is unaffected.
 
@@ -78,12 +78,14 @@ d3d6ca1aeb109f73e99199ee16d7027cf21eff20e3ddd037de9041917cfa9e6e
 
 No ownership boundary changed. Input policy remains in `demo/src/input.js`, while `demo/index.html` supplies the direction and timing configuration. No fallback path or duplicate gesture owner was added.
 
-## Remaining Acceptance
+## Public-Device Acceptance
 
-Verify on the public build in portrait and landscape:
+The public build passed the operation test on 2026-09-23:
 
-1. Near-diagonal movement waits until one direction is clear.
-2. Continuing to hold after direction lock produces the two-cell target preview without requiring a stationary finger.
-3. Movement before or after the preview does not restart or remove the charged state.
-4. Release after that movement still jumps two cells.
-5. Rotation or cancellation clears the gesture without jumping.
+1. Direction selection remained clear.
+2. Continuing to hold after direction lock produced the two-cell target preview without requiring a stationary finger.
+3. Movement did not restart or remove the charged state.
+4. Release after charging jumped two cells.
+5. Cancellation left no residual gesture state.
+
+Accepted and frozen at commit `b232582`.
