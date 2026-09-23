@@ -113,7 +113,7 @@
 
   function createSwipeHoldGesture(options) {
     const swipeThreshold = options.swipeThreshold || 28;
-    const stableRadius = options.stableRadius || 12;
+    const directionBias = options.directionBias || 8;
     const thresholdMs = options.thresholdMs || 320;
     const setTimer = options.setTimer || setTimeout;
     const clearTimer = options.clearTimer || clearTimeout;
@@ -124,8 +124,6 @@
     let activeTouchId;
     let startX = 0;
     let startY = 0;
-    let stableX = 0;
-    let stableY = 0;
     let direction = null;
     let timerId = null;
     let isCharged = false;
@@ -148,16 +146,6 @@
       }, thresholdMs);
     }
 
-    function restartChargeAt(x, y) {
-      if (timerId !== null) clearTimer(timerId);
-      timerId = null;
-      if (isCharged) onPreviewEnd();
-      isCharged = false;
-      stableX = x;
-      stableY = y;
-      startChargeTimer();
-    }
-
     return {
       start(touchId, x, y) {
         if (activeTouchId !== undefined) return false;
@@ -169,23 +157,23 @@
 
       move(touchId, x, y) {
         if (touchId !== activeTouchId) return false;
-        if (direction !== null) {
-          if (Math.hypot(x - stableX, y - stableY) > stableRadius) {
-            restartChargeAt(x, y);
-          }
-          return true;
-        }
+        if (direction !== null) return true;
 
         const dx = x - startX;
         const dy = y - startY;
         const absX = Math.abs(dx);
         const absY = Math.abs(dy);
-        if (Math.max(absX, absY) <= swipeThreshold) return true;
+        const dominantDistance = Math.max(absX, absY);
+        const secondaryDistance = Math.min(absX, absY);
+        if (
+          dominantDistance <= swipeThreshold ||
+          dominantDistance - secondaryDistance < directionBias
+        ) return true;
 
         direction = absX > absY
           ? (dx > 0 ? 'RIGHT' : 'LEFT')
           : (dy > 0 ? 'DOWN' : 'UP');
-        restartChargeAt(x, y);
+        startChargeTimer();
         return true;
       },
 

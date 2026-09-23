@@ -1407,7 +1407,7 @@
       });
       const swipeGesture = FrogInput.createSwipeHoldGesture({
         swipeThreshold: 28,
-        stableRadius: 12,
+        directionBias: 8,
         thresholdMs: 320,
         onPreview: (dir, steps) => this.showJumpPreview(dir, steps),
         onPreviewEnd: () => this.clearJumpPreview(),

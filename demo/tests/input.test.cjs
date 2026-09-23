@@ -151,7 +151,7 @@ test('a canvas swipe locks its dominant direction and jumps one cell on release'
   assert.equal(gesture.end(71), false);
 });
 
-test('a stable canvas swipe previews and releases a two-cell jump after 320ms', () => {
+test('holding after canvas direction lock previews and releases a two-cell jump after 320ms', () => {
   const scheduler = createScheduler();
   const events = [];
   const gesture = createSwipeHoldGesture({
@@ -177,12 +177,58 @@ test('a stable canvas swipe previews and releases a two-cell jump after 320ms', 
   ]);
 });
 
-test('canvas movement beyond the stable radius restarts charge without changing direction', () => {
+test('a charged canvas swipe keeps its preview and two-cell jump through later drift', () => {
+  const scheduler = createScheduler();
+  const events = [];
+  const gesture = createSwipeHoldGesture({
+    setTimer: scheduler.setTimer,
+    clearTimer: scheduler.clearTimer,
+    onPreview: (...args) => events.push(['preview', ...args]),
+    onPreviewEnd: () => events.push(['preview-end']),
+    onJump: (...args) => events.push(['jump', ...args])
+  });
+
+  gesture.start(74, 100, 100);
+  gesture.move(74, 140, 100);
+  scheduler.runPending();
+  gesture.move(74, 156, 102);
+  gesture.end(74);
+
+  assert.deepEqual(events, [
+    ['preview', 'RIGHT', 2],
+    ['preview-end'],
+    ['jump', 'RIGHT', 2]
+  ]);
+  assert.equal(scheduler.getSetCount(), 1);
+});
+
+test('an ambiguous diagonal swipe waits for a clear dominant direction before locking', () => {
   const scheduler = createScheduler();
   const events = [];
   const gesture = createSwipeHoldGesture({
     swipeThreshold: 28,
-    stableRadius: 12,
+    directionBias: 8,
+    setTimer: scheduler.setTimer,
+    clearTimer: scheduler.clearTimer,
+    onJump: (...args) => events.push(['jump', ...args])
+  });
+
+  gesture.start(75, 100, 100);
+  gesture.move(75, 130, 129);
+  assert.equal(scheduler.getSetCount(), 0);
+
+  gesture.move(75, 132, 150);
+  assert.equal(scheduler.getSetCount(), 1);
+  gesture.end(75);
+
+  assert.deepEqual(events, [['jump', 'DOWN', 1]]);
+});
+
+test('canvas movement after direction lock keeps one uninterrupted charge timer', () => {
+  const scheduler = createScheduler();
+  const events = [];
+  const gesture = createSwipeHoldGesture({
+    swipeThreshold: 28,
     setTimer: scheduler.setTimer,
     clearTimer: scheduler.clearTimer,
     onPreview: (...args) => events.push(['preview', ...args]),
@@ -195,11 +241,10 @@ test('canvas movement beyond the stable radius restarts charge without changing 
   assert.equal(scheduler.getSetCount(), 1);
 
   gesture.move(73, 124, 113);
-  assert.equal(scheduler.getSetCount(), 1);
-
   gesture.move(73, 118, 126);
-  assert.equal(scheduler.getClearCount(), 1);
-  assert.equal(scheduler.getSetCount(), 2);
+  gesture.move(73, 150, 140);
+  assert.equal(scheduler.getClearCount(), 0);
+  assert.equal(scheduler.getSetCount(), 1);
 
   scheduler.runPending();
   gesture.end(73);
