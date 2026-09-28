@@ -1,0 +1,17 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/core-element-change-proposal-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "proposalId", "requestId", "revisionId", "regionId", "description", "rationale", "createdAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "proposalId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "requestId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "revisionId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "regionId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "description": { "type": "string", "minLength": 1 },
+    "rationale": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

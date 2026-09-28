@@ -1,0 +1,13 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/semantic-map-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestId", "revisionId", "bindings"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "requestId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "revisionId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "bindings": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["sourceRegionId", "canonicalElementId", "usage", "contrastRequirement", "exclusionRadius"], "properties": { "sourceRegionId": { "$ref": "common-v1.schema.json#/$defs/id" }, "canonicalElementId": { "type": "string", "minLength": 1 }, "usage": { "enum": ["REFERENCE_ONLY", "CANONICAL_OVERLAY"] }, "contrastRequirement": { "type": "number", "minimum": 0 }, "exclusionRadius": { "type": "number", "minimum": 0 } } } }
+  }
+}

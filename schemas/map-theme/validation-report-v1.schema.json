@@ -1,0 +1,12 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/validation-report-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reportId", "validatorVersion", "packageId", "revisionId", "mappingApprovalHash", "packageContentHash", "reviewEvidenceHash", "checks", "deviations", "passed", "createdAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 }, "reportId": { "$ref": "common-v1.schema.json#/$defs/id" }, "validatorVersion": { "type": "string", "minLength": 1 }, "packageId": { "$ref": "common-v1.schema.json#/$defs/id" }, "revisionId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "mappingApprovalHash": { "$ref": "common-v1.schema.json#/$defs/hash" }, "packageContentHash": { "$ref": "common-v1.schema.json#/$defs/hash" }, "reviewEvidenceHash": { "$ref": "common-v1.schema.json#/$defs/hash" },
+    "checks": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "passed"], "properties": { "id": { "type": "string", "minLength": 1 }, "passed": { "type": "boolean" } } } }, "deviations": { "type": "array", "uniqueItems": true, "items": { "$ref": "common-v1.schema.json#/$defs/id" } }, "passed": { "type": "boolean" }, "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

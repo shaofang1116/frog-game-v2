@@ -1,0 +1,15 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/mapping-proposal-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestId", "revisionId", "sourceBundleHash", "briefHash", "provenanceHash", "regionDecisions", "layerPlan", "semanticBindings", "budgets"],
+  "properties": {
+    "schemaVersion": { "const": 1 }, "requestId": { "$ref": "common-v1.schema.json#/$defs/id" }, "revisionId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "sourceBundleHash": { "$ref": "common-v1.schema.json#/$defs/hash" }, "briefHash": { "$ref": "common-v1.schema.json#/$defs/hash" }, "provenanceHash": { "$ref": "common-v1.schema.json#/$defs/hash" },
+    "regionDecisions": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["regionId", "disposition"], "properties": { "regionId": { "$ref": "common-v1.schema.json#/$defs/id" }, "disposition": { "enum": ["KEEP_BACKGROUND", "REBUILD_BACKGROUND", "MAP_CANONICAL", "PROPOSE_CORE_CHANGE", "REJECT"] } } } },
+    "layerPlan": { "type": "array", "minItems": 1, "items": { "$ref": "common-v1.schema.json#/$defs/id" } },
+    "semanticBindings": { "type": "array", "items": { "$ref": "common-v1.schema.json#/$defs/id" } },
+    "budgets": { "$ref": "common-v1.schema.json#/$defs/normalizedRect" }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/visual-scorecard-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reviewer", "viewport", "scores"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewer": { "type": "string", "minLength": 1 },
+    "viewport": { "type": "object", "additionalProperties": false, "required": ["width", "height"], "properties": { "width": { "type": "integer", "minimum": 1 }, "height": { "type": "integer", "minimum": 1 } } },
+    "scores": { "type": "array", "minItems": 6, "items": { "type": "object", "additionalProperties": false, "required": ["category", "score", "evidence"], "properties": { "category": { "enum": ["target-readability", "hazard-recognition", "checkpoint-prominence", "theme-differentiation", "transition-continuity", "motion-weather-comfort"] }, "score": { "type": "integer", "minimum": 1, "maximum": 5 }, "evidence": { "type": "string", "minLength": 1 } } } }
+  }
+}

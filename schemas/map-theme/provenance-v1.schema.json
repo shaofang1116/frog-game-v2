@@ -1,0 +1,17 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/provenance-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "provenanceId", "creator", "creationMethod", "rightsHolder", "allowedUses", "sourceHashes", "createdAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "provenanceId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "creator": { "type": "string", "minLength": 1 },
+    "creationMethod": { "type": "string", "minLength": 1 },
+    "rightsHolder": { "type": "string", "minLength": 1 },
+    "allowedUses": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "sourceHashes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "common-v1.schema.json#/$defs/hash" } },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

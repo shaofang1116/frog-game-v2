@@ -1,0 +1,20 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/import-receipt-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "packageId", "revisionId", "packageContentHash", "mappingApprovalHash", "validationReportHash", "reviewEvidenceHash", "mappingApprovalId", "importApprovalHash", "importApprovalId", "importedAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "packageId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "revisionId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "packageContentHash": { "$ref": "common-v1.schema.json#/$defs/hash" },
+    "mappingApprovalHash": { "$ref": "common-v1.schema.json#/$defs/hash" },
+    "validationReportHash": { "$ref": "common-v1.schema.json#/$defs/hash" },
+    "reviewEvidenceHash": { "$ref": "common-v1.schema.json#/$defs/hash" },
+    "mappingApprovalId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "importApprovalHash": { "$ref": "common-v1.schema.json#/$defs/hash" },
+    "importApprovalId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "importedAt": { "type": "string", "format": "date-time" }
+  }
+}

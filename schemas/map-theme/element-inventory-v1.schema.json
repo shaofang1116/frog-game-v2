@@ -1,0 +1,30 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/element-inventory-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestId", "revisionId", "regions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "requestId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "revisionId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "regions": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "region", "confidence", "disposition", "rationale", "occlusionRisk", "reviewerDecision"],
+        "properties": {
+          "id": { "$ref": "common-v1.schema.json#/$defs/id" },
+          "region": { "$ref": "common-v1.schema.json#/$defs/normalizedRect" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "disposition": { "enum": ["KEEP_BACKGROUND", "REBUILD_BACKGROUND", "MAP_CANONICAL", "PROPOSE_CORE_CHANGE", "REJECT"] },
+          "rationale": { "type": "string", "minLength": 1 },
+          "targetLayer": { "type": "string", "minLength": 1 },
+          "canonicalElementId": { "type": "string", "minLength": 1 },
+          "occlusionRisk": { "type": "string", "minLength": 1 },
+          "reviewerDecision": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

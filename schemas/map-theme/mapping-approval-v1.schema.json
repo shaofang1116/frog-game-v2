@@ -1,0 +1,13 @@
+{
+  "$id": "https://frog-game-v2.local/schemas/map-theme/mapping-approval-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "approvalId", "requestId", "revisionId", "proposalHash", "sourceBundleHash", "briefHash", "provenanceHash", "regionDecisions", "acceptedLayerIds", "canonicalBindings", "rejectedRegionIds", "acknowledgedCoreProposalIds", "budgets", "visualScorecard", "approvedBy", "approvedAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 }, "approvalId": { "$ref": "common-v1.schema.json#/$defs/id" }, "requestId": { "$ref": "common-v1.schema.json#/$defs/id" }, "revisionId": { "$ref": "common-v1.schema.json#/$defs/id" },
+    "proposalHash": { "$ref": "common-v1.schema.json#/$defs/hash" }, "sourceBundleHash": { "$ref": "common-v1.schema.json#/$defs/hash" }, "briefHash": { "$ref": "common-v1.schema.json#/$defs/hash" }, "provenanceHash": { "$ref": "common-v1.schema.json#/$defs/hash" },
+    "regionDecisions": { "type": "array", "minItems": 1 }, "acceptedLayerIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "common-v1.schema.json#/$defs/id" } }, "canonicalBindings": { "type": "array" }, "rejectedRegionIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "common-v1.schema.json#/$defs/id" } }, "acknowledgedCoreProposalIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "common-v1.schema.json#/$defs/id" } },
+    "budgets": { "type": "object" }, "visualScorecard": { "type": "object" }, "approvedBy": { "type": "string", "minLength": 1 }, "approvedAt": { "type": "string", "format": "date-time" }
+  }
+}
