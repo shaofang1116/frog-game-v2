@@ -1,0 +1,19 @@
+{
+  "name": "frog-game-v2",
+  "version": "0.0.0-development",
+  "private": true,
+  "scripts": {
+    "test:unit": "node --test demo/tests/*.test.cjs",
+    "serve:demo": "http-server . -p 4173 -c-1",
+    "test:browser": "playwright test",
+    "test:browser:preview": "MAP_THEME_MODE=preview playwright test",
+    "audit:map-themes": "node scripts/map-theme-audit.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.1",
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1",
+    "http-server": "14.1.1",
+    "json-canonicalize": "1.1.1"
+  }
+}
