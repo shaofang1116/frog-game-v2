@@ -119,8 +119,85 @@ test('governance chain, deterministic evidence, import receipts, and fail-closed
   }
 });
 
+test('Task8 intake composition creates reproducible, closed revisions without build dependencies', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'map-theme-task8-'));
+  try {
+    const intake = await createIntake(root);
+    expectPass(run('map-theme-evidence.mjs', ['compose-intake', '--intake', intake]));
+    expectPass(run('map-theme-evidence.mjs', ['compose-intake', '--intake', intake]));
+    const first = run('map-theme-evidence.mjs', ['init', '--request', 'task8-fixture', '--sequence', '1', '--intake', intake]);
+    expectPass(first);
+    const revision = first.stdout.trim();
+    const bundle = JSON.parse(await fs.readFile(path.join(revision, 'source', 'source-bundle.json')));
+    const { canonicalJsonHash, sourceBundleHash } = await import('../../scripts/lib/map-theme-hash.mjs');
+    const expectedId = `r0001-${(await sourceBundleHash(bundle)).slice(0, 12)}-${canonicalJsonHash(JSON.parse(await fs.readFile(path.join(revision, 'source', 'map-design-brief.json')))).slice(0, 12)}`;
+    assert.equal(path.basename(revision), expectedId);
+    assert.equal(await fs.stat(intake).then(() => true, () => false), false, 'verified intake is removed');
+    assert.deepEqual(bundle.files.map((file) => file.role).sort(), ['clean-environment-plate', 'composite-preview', 'semantic-overlay']);
+    for (const file of bundle.files) assert.equal(file.sha256, sha(await fs.readFile(path.join(revision, 'source', 'files', file.path))));
+
+    expectPass(run('map-theme-evidence.mjs', ['render-proposal', '--revision', revision]));
+    for (const file of ['diff-report.md', 'preview-390x844.png', 'preview-480x900.png', 'visual-scorecard.json']) {
+      await fs.access(path.join(revision, 'proposal', file));
+    }
+    expectPass(run('map-theme-validate.mjs', ['submission', revision]));
+    const scorecardFile = path.join(revision, 'proposal', 'visual-scorecard.json');
+    const scorecard = JSON.parse(await fs.readFile(scorecardFile));
+    assert.deepEqual(scorecard.scores.map(({ category }) => category).sort(), scorecardCategories());
+
+    await writeJson(scorecardFile, { ...scorecard, scores: scorecard.scores.slice(1) });
+    assert.notEqual(run('map-theme-validate.mjs', ['submission', revision]).status, 0, 'scorecard must match its schema');
+    await writeJson(scorecardFile, scorecard);
+    expectPass(run('map-theme-validate.mjs', ['submission', revision]));
+
+    await fs.writeFile(path.join(revision, 'proposal', 'unexpected.txt'), 'not allowed');
+    assert.notEqual(run('map-theme-validate.mjs', ['submission', revision]).status, 0, 'proposal directory must reject non-whitelisted files');
+    await fs.rm(path.join(revision, 'proposal', 'unexpected.txt'));
+    for (const absent of ['build', 'approval', 'review', 'import']) {
+      assert.equal(await fs.stat(path.join(revision, absent)).then(() => true, () => false), false, `${absent} must not be created`);
+    }
+
+    const duplicateIntake = await createIntake(root, 'duplicate');
+    expectPass(run('map-theme-evidence.mjs', ['compose-intake', '--intake', duplicateIntake]));
+    assert.notEqual(run('map-theme-evidence.mjs', ['init', '--request', 'task8-fixture', '--sequence', '1', '--intake', duplicateIntake]).status, 0, 'revision IDs are append-only');
+
+    const reproducibleIntake = await createIntake(path.join(root, 'reproducible'));
+    expectPass(run('map-theme-evidence.mjs', ['compose-intake', '--intake', reproducibleIntake]));
+    const reproducible = run('map-theme-evidence.mjs', ['init', '--request', 'task8-fixture', '--sequence', '1', '--intake', reproducibleIntake]);
+    expectPass(reproducible);
+    assert.equal(path.basename(reproducible.stdout.trim()), expectedId, 'same source and brief yield the same revision ID');
+
+    const unclosed = await createIntake(path.join(root, 'unclosed'));
+    await fs.writeFile(path.join(unclosed, 'files', 'unlisted.png'), 'unlisted');
+    assert.notEqual(run('map-theme-evidence.mjs', ['compose-intake', '--intake', unclosed]).status, 0, 'intake file directory must be closed');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 function expectPass(result) {
   assert.equal(result.status, 0, `${result.stderr}\n${result.stdout}`);
+}
+
+async function createIntake(root, name = 'intake') {
+  const intake = path.join(root, name);
+  for (const dir of ['files', 'analysis', 'proposal']) await fs.mkdir(path.join(intake, dir), { recursive: true });
+  await fs.writeFile(path.join(intake, 'files', 'clean-environment-plate.png'), 'clean-source');
+  const provenance = { schemaVersion: 1, provenanceId: 'task8-art', creator: 'fixture', creationMethod: 'original', rightsHolder: 'fixture', allowedUses: ['runtime'], sourceHashes: [sha('clean-source')], createdAt: '2026-09-28T00:00:00Z' };
+  const brief = { schemaVersion: 1, requestId: 'task8-fixture', mapId: 'task8-fixture', displayName: 'Task8', designPurpose: 'test', chapterRole: 'test', sourceType: 'original', targetViewport: { width: 960, height: 1800 }, cameraModel: 'top-down', gameplayCorridor: rect(), safeZones: [rect(0, 0, 1, 0.1)], themeKeywords: ['test'], backgroundIntent: 'test', canonicalElements: [], newElementProposals: [], motionIntent: 'none', prohibitedChanges: ['gameplay'], provenance: { provenanceId: provenance.provenanceId, provenanceHash: canonical(provenance) } };
+  const pending = 'pending';
+  const inventory = { schemaVersion: 1, requestId: 'task8-fixture', revisionId: pending, regions: [{ id: 'water-region', region: rect(), confidence: 1, disposition: 'KEEP_BACKGROUND', rationale: 'background', targetLayer: 'water', occlusionRisk: 'none', reviewerDecision: 'approved' }] };
+  const admission = { schemaVersion: 1, requestId: 'task8-fixture', revisionId: pending, submissionClass: 'IMPORT_CANDIDATE', workflowState: 'APPROVED', score: 100, hardGates: [{ id: 'rights', passed: true }], createdAt: '2026-09-28T00:00:00Z' };
+  const layerPlan = { schemaVersion: 1, requestId: 'task8-fixture', revisionId: pending, layers: [{ id: 'water', role: 'water-base', sourceRegionIds: ['water-region'] }] };
+  const semanticMap = { schemaVersion: 1, requestId: 'task8-fixture', revisionId: pending, bindings: [] };
+  const proposal = { schemaVersion: 1, requestId: 'task8-fixture', revisionId: pending, sourceBundleHash: 'a'.repeat(64), briefHash: 'a'.repeat(64), provenanceHash: 'a'.repeat(64), regionDecisions: [{ regionId: 'water-region', disposition: 'KEEP_BACKGROUND' }], layerPlan: ['water'], semanticBindings: [], budgets: rect() };
+  for (const [file, value] of Object.entries({
+    'map-design-brief.json': brief, 'provenance.json': provenance,
+    'analysis/admission-report.json': admission, 'analysis/element-inventory.json': inventory,
+    'proposal/mapping-proposal.json': proposal, 'proposal/layer-plan.json': layerPlan, 'proposal/semantic-map.json': semanticMap
+  })) await writeJson(path.join(intake, file), value);
+  await fs.writeFile(path.join(intake, 'analysis', 'semantic-mask.png'), 'semantic-mask');
+  return intake;
 }
 
 async function createRevision(root) {
@@ -146,8 +223,11 @@ async function createRevision(root) {
     'proposal/mapping-proposal.json': proposal, 'proposal/layer-plan.json': layerPlan, 'proposal/semantic-map.json': semanticMap,
     'approval/mapping-approval.json': approval, 'build/map-theme.json': manifest
   })) await writeJson(path.join(revision, file), value);
+  await fs.writeFile(path.join(revision, 'analysis/semantic-mask.png'), 'semantic-mask');
   await fs.writeFile(path.join(revision, 'proposal/diff-report.md'), 'deterministic diff\n');
-  await fs.writeFile(path.join(revision, 'proposal/preview.png'), 'deterministic image data');
+  await fs.writeFile(path.join(revision, 'proposal/preview-390x844.png'), 'deterministic image data');
+  await fs.writeFile(path.join(revision, 'proposal/preview-480x900.png'), 'deterministic image data');
+  await writeJson(path.join(revision, 'proposal/visual-scorecard.json'), visualScorecard());
   return revision;
 }
 
@@ -164,6 +244,17 @@ async function writeValidationAndImportApproval(revision) {
 }
 
 function rect(x = 0, y = 0, width = 1, height = 1) { return { x, y, width, height }; }
+function scorecardCategories() {
+  return ['checkpoint-prominence', 'hazard-recognition', 'motion-weather-comfort', 'target-readability', 'theme-differentiation', 'transition-continuity'];
+}
+function visualScorecard() {
+  return {
+    schemaVersion: 1,
+    reviewer: 'fixture',
+    viewport: { width: 960, height: 1800 },
+    scores: scorecardCategories().map((category) => ({ category, score: 5, evidence: 'fixture evidence' }))
+  };
+}
 function canonical(value) {
   const { canonicalize } = require('json-canonicalize');
   return sha(Buffer.from(canonicalize(value), 'utf8'));

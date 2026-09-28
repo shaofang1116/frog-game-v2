@@ -13,6 +13,10 @@ const sameSet = (actual, expected, label) => {
     fail(`${label} must match exactly`);
   }
 };
+const scorecardCategories = [
+  'target-readability', 'hazard-recognition', 'checkpoint-prominence',
+  'theme-differentiation', 'transition-continuity', 'motion-weather-comfort'
+];
 const hash = (value) => canonicalJsonHash(value);
 
 export async function context(revision) {
@@ -68,6 +72,7 @@ export async function validateSubmission(revision) {
   const proposal = await readArtifact(ctx, 'proposal/mapping-proposal.json', 'mapping-proposal-v1.schema.json');
   const layerPlan = await readArtifact(ctx, 'proposal/layer-plan.json', 'layer-plan-v1.schema.json');
   const semanticMap = await readArtifact(ctx, 'proposal/semantic-map.json', 'semantic-map-v1.schema.json');
+  const scorecard = await readArtifact(ctx, 'proposal/visual-scorecard.json', 'visual-scorecard-v1.schema.json');
 
   const requestId = bundle.requestId;
   const revisionId = bundle.revisionId;
@@ -91,10 +96,12 @@ export async function validateSubmission(revision) {
   for (const file of bundle.files) {
     if (await hashFile(path.join(ctx.revision, 'source', 'files', file.path)) !== file.sha256) fail(`Source hash mismatch: ${file.path}`);
   }
-  await closedArtifactDirectory(ctx, 'analysis', ['admission-report.json', 'element-inventory.json']);
+  await closedArtifactDirectory(ctx, 'analysis', ['admission-report.json', 'element-inventory.json', 'semantic-mask.png']);
   await closedArtifactDirectory(ctx, 'proposal', [
-    'mapping-proposal.json', 'layer-plan.json', 'semantic-map.json', 'diff-report.md', 'preview.png'
+    'mapping-proposal.json', 'layer-plan.json', 'semantic-map.json', 'diff-report.md',
+    'preview-390x844.png', 'preview-480x900.png', 'visual-scorecard.json'
   ]);
+  sameSet(scorecard.scores.map((score) => score.category), scorecardCategories, 'Visual scorecard categories');
 
   const regionIds = inventory.regions.map((region) => region.id);
   if (new Set(regionIds).size !== regionIds.length) fail('Inventory region IDs must be unique');
@@ -120,7 +127,7 @@ export async function validateSubmission(revision) {
   if (proposal.sourceBundleHash !== sourceHash || proposal.briefHash !== hash(brief) || proposal.provenanceHash !== hash(provenance)) {
     fail('Proposal source binding mismatch');
   }
-  return { ctx, bundle, brief, provenance, admission, inventory, proposal, layerPlan, semanticMap, sourceHash, proposalHash: hash(proposal) };
+  return { ctx, bundle, brief, provenance, admission, inventory, proposal, layerPlan, semanticMap, scorecard, sourceHash, proposalHash: hash(proposal) };
 }
 
 export async function checkBuild(revision) {
