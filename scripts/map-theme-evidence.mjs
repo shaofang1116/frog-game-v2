@@ -1,9 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execFile as execFileCallback } from 'node:child_process';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { canonicalJsonHash, hashFile, inspectClosedDirectory, sourceBundleHash } from './lib/map-theme-hash.mjs';
 import { checkBuild, context, readArtifact } from './map-theme-validate.mjs';
 
+const execFile = promisify(execFileCallback);
+const pngSignature = Buffer.from('89504e470d0a1a0a', 'hex');
 const roles = [
   ['viewport-preview', 'viewport-preview.txt'],
   ['visual-diff', 'visual-diff.txt'],
@@ -36,6 +40,73 @@ async function readJson(file) {
 
 async function writeNew(file, value) {
   await fs.writeFile(file, `${JSON.stringify(value)}\n`, { flag: 'wx' });
+}
+
+async function writeDerivedText(file, value) {
+  if (await exists(file)) {
+    if (await fs.readFile(file, 'utf8') === value) return;
+    throw new Error(`Proposal evidence differs from its deterministic value: ${path.basename(file)}`);
+  }
+  await fs.writeFile(file, value, { flag: 'wx' });
+}
+
+async function writeDerivedJson(file, value) {
+  return writeDerivedText(file, `${JSON.stringify(value)}\n`);
+}
+
+async function pngDimensions(file) {
+  let output;
+  try {
+    ({ stdout: output } = await execFile('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', '-g', 'format', file]));
+  } catch (error) {
+    if (error.code === 'ENOENT') throw new Error('PNG evidence requires the local sips image processing tool');
+    throw new Error(`Unable to inspect clean environment plate: ${error.stderr || error.message}`);
+  }
+  const width = Number(output.match(/pixelWidth:\s*(\d+)/)?.[1]);
+  const height = Number(output.match(/pixelHeight:\s*(\d+)/)?.[1]);
+  const format = output.match(/format:\s*(\S+)/)?.[1];
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || format !== 'png') {
+    throw new Error('Clean environment plate must be a readable PNG');
+  }
+  return { width, height };
+}
+
+async function renderPreview(source, destination, targetWidth, targetHeight) {
+  const { width, height } = await pngDimensions(source);
+  if (await exists(destination)) {
+    const signature = (await fs.readFile(destination)).subarray(0, pngSignature.length);
+    if (signature.equals(pngSignature)) {
+      const rendered = await pngDimensions(destination);
+      if (rendered.width !== targetWidth || rendered.height !== targetHeight) {
+        throw new Error(`Proposal preview has invalid dimensions: ${path.basename(destination)}`);
+      }
+      return;
+    }
+    await fs.rm(destination);
+  }
+  const targetRatio = targetWidth / targetHeight;
+  const sourceRatio = width / height;
+  const cropWidth = sourceRatio > targetRatio ? Math.max(1, Math.round(height * targetRatio)) : width;
+  const cropHeight = sourceRatio > targetRatio ? height : Math.max(1, Math.round(width / targetRatio));
+  const offsetX = Math.floor((width - cropWidth) / 2);
+  const offsetY = Math.floor((height - cropHeight) / 2);
+  const temporary = `${destination}.tmp-${process.pid}`;
+  try {
+    await execFile('sips', [
+      '--cropToHeightWidth', String(cropHeight), String(cropWidth),
+      '--cropOffset', String(offsetY), String(offsetX),
+      source, '--out', temporary
+    ]);
+    await execFile('sips', [
+      '--resampleHeightWidth', String(targetHeight), String(targetWidth),
+      temporary, '--out', temporary
+    ]);
+    const rendered = await pngDimensions(temporary);
+    if (rendered.width !== targetWidth || rendered.height !== targetHeight) throw new Error('Rendered preview dimensions do not match the requested viewport');
+    await fs.copyFile(temporary, destination, fs.constants.COPYFILE_EXCL);
+  } finally {
+    await fs.rm(temporary, { force: true });
+  }
 }
 
 async function assertIntake(intake, requireComposed) {
@@ -139,13 +210,15 @@ async function renderTask8Proposal(revision) {
   for (const file of bundle.files) {
     if (await hashFile(path.join(ctx.revision, 'source', 'files', file.path)) !== file.sha256) throw new Error(`Source hash mismatch: ${file.path}`);
   }
-  const outputs = new Map([
-    ['diff-report.md', stableText('proposal-diff/v1', { revisionId: bundle.revisionId, sourceBundleHash: sourceHash, proposalHash: canonicalJsonHash(proposal) })],
-    ['preview-390x844.png', stableText('proposal-preview/v1', { width: 390, height: 844, revisionId: bundle.revisionId })],
-    ['preview-480x900.png', stableText('proposal-preview/v1', { width: 480, height: 900, revisionId: bundle.revisionId })]
-  ]);
-  for (const [file, content] of outputs) await fs.writeFile(path.join(ctx.revision, 'proposal', file), content, { flag: 'wx' });
-  await writeNew(path.join(ctx.revision, 'proposal', 'visual-scorecard.json'), {
+  const proposalDirectory = path.join(ctx.revision, 'proposal');
+  const cleanEnvironmentPlate = path.join(ctx.revision, 'source', 'files', 'clean-environment-plate.png');
+  await renderPreview(cleanEnvironmentPlate, path.join(proposalDirectory, 'preview-390x844.png'), 390, 844);
+  await renderPreview(cleanEnvironmentPlate, path.join(proposalDirectory, 'preview-480x900.png'), 480, 900);
+  await writeDerivedText(
+    path.join(proposalDirectory, 'diff-report.md'),
+    stableText('proposal-diff/v1', { revisionId: bundle.revisionId, sourceBundleHash: sourceHash, proposalHash: canonicalJsonHash(proposal) })
+  );
+  await writeDerivedJson(path.join(ctx.revision, 'proposal', 'visual-scorecard.json'), {
     schemaVersion: 1, reviewer: 'map-theme-evidence', viewport: brief.targetViewport,
     scores: ['target-readability', 'hazard-recognition', 'checkpoint-prominence', 'theme-differentiation', 'transition-continuity', 'motion-weather-comfort'].map((category) => ({ category, score: 5, evidence: `Derived from ${bundle.revisionId}` }))
   });

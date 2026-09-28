@@ -136,10 +136,22 @@ test('Task8 intake composition creates reproducible, closed revisions without bu
     assert.deepEqual(bundle.files.map((file) => file.role).sort(), ['clean-environment-plate', 'composite-preview', 'semantic-overlay']);
     for (const file of bundle.files) assert.equal(file.sha256, sha(await fs.readFile(path.join(revision, 'source', 'files', file.path))));
 
+    for (const file of ['preview-390x844.png', 'preview-480x900.png']) {
+      await fs.writeFile(path.join(revision, 'proposal', file), 'legacy placeholder');
+    }
     expectPass(run('map-theme-evidence.mjs', ['render-proposal', '--revision', revision]));
     for (const file of ['diff-report.md', 'preview-390x844.png', 'preview-480x900.png', 'visual-scorecard.json']) {
       await fs.access(path.join(revision, 'proposal', file));
     }
+    for (const [file, width, height] of [
+      ['preview-390x844.png', 390, 844],
+      ['preview-480x900.png', 480, 900]
+    ]) {
+      const preview = path.join(revision, 'proposal', file);
+      assert.deepEqual((await fs.readFile(preview)).subarray(0, 8), Buffer.from('89504e470d0a1a0a', 'hex'), `${file} must be a PNG`);
+      assert.match(imageInfo(preview), new RegExp(`pixelWidth: ${width}[\\s\\S]*pixelHeight: ${height}[\\s\\S]*format: png`));
+    }
+    expectPass(run('map-theme-evidence.mjs', ['render-proposal', '--revision', revision]));
     expectPass(run('map-theme-validate.mjs', ['submission', revision]));
     const scorecardFile = path.join(revision, 'proposal', 'visual-scorecard.json');
     const scorecard = JSON.parse(await fs.readFile(scorecardFile));
@@ -179,11 +191,18 @@ function expectPass(result) {
   assert.equal(result.status, 0, `${result.stderr}\n${result.stdout}`);
 }
 
+function imageInfo(file) {
+  const result = spawnSync('sips', ['-g', 'pixelWidth', '-g', 'pixelHeight', '-g', 'format', file], { encoding: 'utf8' });
+  expectPass(result);
+  return result.stdout;
+}
+
 async function createIntake(root, name = 'intake') {
   const intake = path.join(root, name);
   for (const dir of ['files', 'analysis', 'proposal']) await fs.mkdir(path.join(intake, dir), { recursive: true });
-  await fs.writeFile(path.join(intake, 'files', 'clean-environment-plate.png'), 'clean-source');
-  const provenance = { schemaVersion: 1, provenanceId: 'task8-art', creator: 'fixture', creationMethod: 'original', rightsHolder: 'fixture', allowedUses: ['runtime'], sourceHashes: [sha('clean-source')], createdAt: '2026-09-28T00:00:00Z' };
+  const cleanSource = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL5hAAAAABJRU5ErkJggg==', 'base64');
+  await fs.writeFile(path.join(intake, 'files', 'clean-environment-plate.png'), cleanSource);
+  const provenance = { schemaVersion: 1, provenanceId: 'task8-art', creator: 'fixture', creationMethod: 'original', rightsHolder: 'fixture', allowedUses: ['runtime'], sourceHashes: [sha(cleanSource)], createdAt: '2026-09-28T00:00:00Z' };
   const brief = { schemaVersion: 1, requestId: 'task8-fixture', mapId: 'task8-fixture', displayName: 'Task8', designPurpose: 'test', chapterRole: 'test', sourceType: 'original', targetViewport: { width: 960, height: 1800 }, cameraModel: 'top-down', gameplayCorridor: rect(), safeZones: [rect(0, 0, 1, 0.1)], themeKeywords: ['test'], backgroundIntent: 'test', canonicalElements: [], newElementProposals: [], motionIntent: 'none', prohibitedChanges: ['gameplay'], provenance: { provenanceId: provenance.provenanceId, provenanceHash: canonical(provenance) } };
   const pending = 'pending';
   const inventory = { schemaVersion: 1, requestId: 'task8-fixture', revisionId: pending, regions: [{ id: 'water-region', region: rect(), confidence: 1, disposition: 'KEEP_BACKGROUND', rationale: 'background', targetLayer: 'water', occlusionRisk: 'none', reviewerDecision: 'approved' }] };
