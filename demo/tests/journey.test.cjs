@@ -5,9 +5,10 @@ const {
   createJourney,
   updateJourney
 } = require('../src/journey.js');
+const { getJourneyOptions } = require('../src/chapters.js');
 
 test('distance before the first milestone keeps the first stage active', () => {
-  const journey = createJourney({ totalStages: 2, rowsPerStage: 12 });
+  const journey = createJourney(getJourneyOptions());
 
   assert.deepEqual(updateJourney(journey, 11), {
     currentStage: 1,
@@ -18,7 +19,7 @@ test('distance before the first milestone keeps the first stage active', () => {
 });
 
 test('the first milestone advances to stage two without resetting run state', () => {
-  const journey = createJourney({ totalStages: 2, rowsPerStage: 12 });
+  const journey = createJourney(getJourneyOptions());
   const runState = { score: 180, timeLeft: 21, bombs: 3 };
 
   const result = updateJourney(journey, 12);
@@ -29,11 +30,7 @@ test('the first milestone advances to stage two without resetting run state', ()
 });
 
 test('the final milestone completes the journey only at row 24', () => {
-  const secondStage = {
-    currentStage: 2,
-    totalStages: 2,
-    rowsPerStage: 12
-  };
+  const secondStage = updateJourney(createJourney(getJourneyOptions()), 12);
 
   assert.equal(updateJourney(secondStage, 23).event, null);
   assert.deepEqual(updateJourney(secondStage, 24), {
