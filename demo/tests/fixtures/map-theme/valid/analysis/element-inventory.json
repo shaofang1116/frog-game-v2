@@ -1,0 +1,1 @@
+{"schemaVersion":1,"requestId":"fixture-request","revisionId":"fixture-map","regions":[{"id":"water-region","region":{"x":0,"y":0,"width":1,"height":1},"confidence":1,"disposition":"KEEP_BACKGROUND","rationale":"background","targetLayer":"water","occlusionRisk":"none","reviewerDecision":"approved"}]}

@@ -1,0 +1,2 @@
+performance-report/v1
+{"drawCalls":1,"visibleInstances":1}

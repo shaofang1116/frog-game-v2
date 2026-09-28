@@ -69,6 +69,8 @@ export async function inspectClosedDirectory(rootDir, allowedFiles) {
         throw new Error(`Unsupported directory entry: ${childRelative}`);
       }
       if (info.isDirectory()) {
+        const children = await fs.readdir(child);
+        if (children.length === 0) throw new Error(`Empty directory is not allowed: ${childRelative}`);
         await walk(childRelative);
       } else {
         if (info.nlink > 1) throw new Error(`Hard-linked file is not allowed: ${childRelative}`);

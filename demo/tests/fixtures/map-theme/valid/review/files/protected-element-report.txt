@@ -1,0 +1,2 @@
+protected-element-report/v1
+{"frog.player":"inherit-only","surface.lily-pad.normal":"inherit-only","surface.lily-pad.sinking":"inherit-only","hazard.crocodile":"inherit-only","hazard.crocodile.warning-wake":"inherit-only","reward.flower":"inherit-only","reward.golden-lotus":"inherit-only","item.bomb":"inherit-only","item.bomb-pickup":"inherit-only","preview.jump-target":"inherit-only","ui.hud":"inherit-only","ui.control.dpad":"inherit-only","ui.control.bomb":"inherit-only"}

@@ -1,0 +1,2 @@
+viewport-preview/v1
+{"packageId":"fixture-map","viewport":{"aspectRatio":"8:15","logicalWidth":960,"logicalHeight":1800,"cameraModel":"top-down","safeZones":[{"x":0,"y":0,"width":1,"height":0.1}]},"layers":["water"]}

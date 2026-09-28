@@ -1,0 +1,2 @@
+accessibility-motion-report/v1
+{"motionInstances":0,"safeZones":[{"x":0,"y":0,"width":1,"height":0.1}]}
