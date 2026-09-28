@@ -437,6 +437,7 @@
 
 <script src="./src/input.js"></script>
 <script src="./src/journey.js"></script>
+<script src="./src/game-elements.js"></script>
 <script>
 /**
  * 荷塘大冒险 (Frog Pond Adventure)
@@ -1141,13 +1142,13 @@
           const isSinking = type === TILE_SINKING;
           const sinkRatio = row.sinks[col] > 0 ? (row.sinks[col] / 1.6) : 1;
 
-          this.drawLilyPad(ctx, padX, rowY, this.tileSize * 0.44 * sinkRatio, isSinking, row.sinks[col]);
+          FrogGameElements.drawLilyPad(ctx, padX, rowY, this.tileSize * 0.44 * sinkRatio, isSinking, row.sinks[col]);
 
           // 绘制道具
           if (row.items[col] === 'FLOWER') {
-            this.drawLotusFlower(ctx, padX, rowY);
+            FrogGameElements.drawFlower(ctx, padX, rowY);
           } else if (row.items[col] === 'BOMB_ITEM') {
-            this.drawBombItem(ctx, padX, rowY);
+            FrogGameElements.drawBombPickup(ctx, padX, rowY);
           }
         });
       });
@@ -1157,7 +1158,7 @@
         const crocY = this.getScreenY(croc.gridY);
         if (crocY >= -50 && crocY <= this.height + 50) {
           const crocX = this.getScreenX(croc.x);
-          this.drawCrocodile(ctx, crocX, crocY, croc.vx > 0);
+          FrogGameElements.drawCrocodile(ctx, crocX, crocY, croc.vx > 0);
         }
       });
 
@@ -1166,20 +1167,11 @@
         const previewX = this.getScreenX(this.jumpPreview.gridX);
         const previewY = this.getScreenY(this.jumpPreview.gridY);
         const pulse = 1 + Math.sin(Date.now() * 0.012) * 0.08;
-        ctx.save();
-        ctx.strokeStyle = '#ffb703';
-        ctx.fillStyle = 'rgba(255, 183, 3, 0.18)';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([6, 5]);
-        ctx.beginPath();
-        ctx.arc(previewX, previewY, this.tileSize * 0.32 * pulse, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
+        FrogGameElements.drawJumpPreview(ctx, previewX, previewY, this.tileSize, pulse, 'charged');
       }
 
       // 5. 绘制青蛙
-      this.drawFrog(ctx);
+      FrogGameElements.drawFrog(ctx, this.frog);
 
       // 6. 绘制粒子
       this.particles.forEach(p => {
@@ -1203,191 +1195,6 @@
         ctx.fillText(ft.text, ft.x, ft.y);
         ctx.restore();
       });
-    },
-
-    // 绘制翠绿荷叶
-    drawLilyPad(ctx, x, y, r, isSinking, sinkTime) {
-      if (r <= 2) return;
-      ctx.save();
-      ctx.translate(x, y);
-
-      // 阴影
-      ctx.fillStyle = 'rgba(10, 30, 45, 0.4)';
-      ctx.beginPath();
-      ctx.ellipse(2, 6, r * 1.05, r * 0.85, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 荷叶本体
-      ctx.fillStyle = isSinking ? '#8cb369' : '#2d6a4f';
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0.25, Math.PI * 2 - 0.25);
-      ctx.lineTo(0, 0);
-      ctx.closePath();
-      ctx.fill();
-
-      // 浅色叶脉边缘
-      ctx.strokeStyle = isSinking ? '#bc4749' : '#52b788';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      // 易碎警示倒计时闪烁
-      if (isSinking && sinkTime > 0) {
-        ctx.fillStyle = 'rgba(230, 57, 70, 0.7)';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('⏳', 0, 0);
-      }
-      ctx.restore();
-    },
-
-    // 绘制粉色莲花
-    drawLotusFlower(ctx, x, y) {
-      ctx.save();
-      ctx.translate(x, y - 4);
-      const petals = 6;
-      ctx.fillStyle = '#ff4d6d';
-      for (let i = 0; i < petals; i++) {
-        ctx.rotate((Math.PI * 2) / petals);
-        ctx.beginPath();
-        ctx.ellipse(0, 7, 3.5, 7, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.fillStyle = '#ffb703';
-      ctx.beginPath();
-      ctx.arc(0, 0, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    },
-
-    // 绘制炸弹拾取图标
-    drawBombItem(ctx, x, y) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.fillStyle = '#222';
-      ctx.beginPath();
-      ctx.arc(0, 2, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffb703';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(2, -4);
-      ctx.lineTo(6, -8);
-      ctx.stroke();
-      ctx.restore();
-    },
-
-    // 绘制凶猛可爱的巡逻鳄鱼
-    drawCrocodile(ctx, x, y, goingRight) {
-      ctx.save();
-      ctx.translate(x, y);
-      if (!goingRight) ctx.scale(-1, 1);
-
-      // 水波警示
-      ctx.strokeStyle = 'rgba(230, 57, 70, 0.4)';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(-25, -12, 50, 24);
-
-      // 身体
-      ctx.fillStyle = '#1e441e';
-      ctx.beginPath();
-      ctx.roundRect(-22, -9, 44, 18, [8, 14, 14, 8]);
-      ctx.fill();
-
-      // 鳄鱼背部脊刺
-      ctx.fillStyle = '#2d6a4f';
-      for (let sx = -14; sx <= 14; sx += 8) {
-        ctx.beginPath();
-        ctx.moveTo(sx, -9);
-        ctx.lineTo(sx + 3, -14);
-        ctx.lineTo(sx + 6, -9);
-        ctx.fill();
-      }
-
-      // 黄色冷酷眼睛
-      ctx.fillStyle = '#ffb703';
-      ctx.beginPath();
-      ctx.arc(10, -5, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.fillRect(11, -6, 1.5, 3);
-
-      ctx.restore();
-    },
-
-    // 绘制萌动青蛙（带跳跃形变）
-    drawFrog(ctx) {
-      const f = this.frog;
-      ctx.save();
-      ctx.translate(f.visualX, f.visualY);
-
-      // 跳跃时高度与形变模拟 (抛物线)
-      let jumpElevation = 0;
-      let scaleX = 1;
-      let scaleY = 1;
-      if (f.isJumping) {
-        jumpElevation = Math.sin(f.jumpProgress * Math.PI) * (f.jumpSteps === 2 ? 32 : 22);
-        scaleX = 1 - Math.sin(f.jumpProgress * Math.PI) * 0.25;
-        scaleY = 1 + Math.sin(f.jumpProgress * Math.PI) * 0.35;
-      }
-      ctx.translate(0, -jumpElevation);
-      ctx.scale(scaleX, scaleY);
-
-      // 青蛙阴影（留在地面）
-      if (jumpElevation > 0) {
-        ctx.save();
-        ctx.translate(0, jumpElevation);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-        ctx.beginPath();
-        ctx.ellipse(0, 4, 16 * (1 - jumpElevation / 60), 8 * (1 - jumpElevation / 60), 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // 身体
-      ctx.fillStyle = f.isJumping && f.jumpSteps === 2 ? '#9ef01a' : '#70e000';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 16, 13, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#38b000';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // 大眼睛底座
-      ctx.fillStyle = '#70e000';
-      ctx.beginPath();
-      ctx.arc(-8, -10, 6.5, 0, Math.PI * 2);
-      ctx.arc(8, -10, 6.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // 眼球眼珠
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-8, -10, 4.5, 0, Math.PI * 2);
-      ctx.arc(8, -10, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#102027';
-      ctx.beginPath();
-      ctx.arc(-8, -10, 2.5, 0, Math.PI * 2);
-      ctx.arc(8, -10, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 可爱腮红
-      ctx.fillStyle = 'rgba(255, 77, 109, 0.45)';
-      ctx.beginPath();
-      ctx.arc(-10, 2, 3, 0, Math.PI * 2);
-      ctx.arc(10, 2, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 微笑小嘴
-      ctx.strokeStyle = '#004b23';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(0, 2, 4, 0.2, Math.PI - 0.2);
-      ctx.stroke();
-
-      ctx.restore();
     },
 
     updateUI() {

@@ -25,6 +25,23 @@ test('the demo loads input and journey policies without the legacy charge contro
   assert.doesNotMatch(html, /chargeMode/);
 });
 
+test('the demo delegates protected element drawing to the canonical library', () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
+
+  assert.match(html, /<script src="\.\/src\/game-elements\.js"><\/script>/);
+  assert.match(html, /FrogGameElements\.drawLilyPad\(/);
+  assert.match(html, /FrogGameElements\.drawFlower\(/);
+  assert.match(html, /FrogGameElements\.drawBombPickup\(/);
+  assert.match(html, /FrogGameElements\.drawCrocodile\(/);
+  assert.match(html, /FrogGameElements\.drawJumpPreview\(/);
+  assert.match(html, /FrogGameElements\.drawFrog\(/);
+  assert.doesNotMatch(html, /\n\s*drawLilyPad\(/);
+  assert.doesNotMatch(html, /\n\s*drawLotusFlower\(/);
+  assert.doesNotMatch(html, /\n\s*drawBombItem\(/);
+  assert.doesNotMatch(html, /\n\s*drawCrocodile\(/);
+  assert.doesNotMatch(html, /\n\s*drawFrog\(/);
+});
+
 test('the demo inline script parses as JavaScript', () => {
   const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
   const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
