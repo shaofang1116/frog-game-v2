@@ -13,6 +13,14 @@ const stageTwoBackgroundPath = path.join(
   'assets',
   'storm-deep-lake-river.jpg'
 );
+const stageOneBackgroundPath = path.join(
+  repoRoot,
+  'demo',
+  'assets',
+  'morning-mist-pond.jpg'
+);
+const expectedStageOneBackgroundHash =
+  'ef04e240c22a6b7853a26e6b44ef045462d597614c31fb69dd6547263d0d6cea';
 const expectedStageTwoBackgroundHash =
   'aadac9b9483900e66b71c4513e6b16115e59532c86002dec37de85f0527b35d5';
 
@@ -50,6 +58,15 @@ test('the demo delegates protected element drawing to the canonical library', ()
   assert.doesNotMatch(html, /\n\s*drawFrog\(/);
 });
 
+test('the Stage 1 morning background remains a local authorized asset', () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
+
+  assert.equal(hashFile(stageOneBackgroundPath), expectedStageOneBackgroundHash);
+  assert.match(html, /this\.preloadStageOneBackground\(\)/);
+  assert.match(html, /image\.src = '\.\/assets\/morning-mist-pond\.jpg'/);
+  assert.doesNotMatch(html, /image\.src = ['"]https?:\/\//);
+});
+
 test('the Stage 2 storm background remains a local authorized asset', () => {
   const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
 
@@ -59,18 +76,25 @@ test('the Stage 2 storm background remains a local authorized asset', () => {
   assert.doesNotMatch(html, /image\.src = ['"]https?:\/\//);
 });
 
-test('Stage 2 draws its loaded background before entities and falls back to procedural water', () => {
+test('each stage draws its loaded local background before entities and falls back to procedural water', () => {
   const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
+  const stageOneBackgroundIndex = html.indexOf('this.drawStageOneMorningBackground(ctx);');
   const stageBackgroundIndex = html.indexOf('this.drawStageTwoStormBackground(ctx);');
   const firstEntityIndex = html.indexOf('FrogGameElements.drawLilyPad(');
 
   assert.match(
     html,
-    /if \(this\.journey\.currentStage === 2 && this\.stageTwoBackground\.ready\) \{\s*this\.drawStageTwoStormBackground\(ctx\);\s*\} else \{\s*this\.drawProceduralWater\(ctx\);\s*\}/
+    /if \(this\.journey\.currentStage === 1 && this\.stageOneBackground\.ready\) \{\s*this\.drawStageOneMorningBackground\(ctx\);\s*\} else if \(this\.journey\.currentStage === 2 && this\.stageTwoBackground\.ready\) \{\s*this\.drawStageTwoStormBackground\(ctx\);\s*\} else \{\s*this\.drawProceduralWater\(ctx\);\s*\}/
   );
+  assert.match(html, /image\.addEventListener\('error', \(\) => \{\s*this\.stageOneBackground\.ready = false;/);
   assert.match(html, /image\.addEventListener\('error', \(\) => \{\s*this\.stageTwoBackground\.ready = false;/);
   assert.match(html, /ctx\.drawImage\(\s*image,[\s\S]*?this\.width,\s*this\.height\s*\)/);
-  assert.ok(stageBackgroundIndex >= 0 && stageBackgroundIndex < firstEntityIndex);
+  assert.ok(
+    stageOneBackgroundIndex >= 0 &&
+      stageBackgroundIndex >= 0 &&
+      stageOneBackgroundIndex < firstEntityIndex &&
+      stageBackgroundIndex < firstEntityIndex
+  );
 });
 
 test('the demo inline script parses as JavaScript', () => {

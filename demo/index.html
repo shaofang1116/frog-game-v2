@@ -584,6 +584,10 @@
     targetCameraY: 0,
     jumpPreview: null,
     inputBuffer: FrogInput.createSingleInputBuffer(),
+    stageOneBackground: {
+      image: null,
+      ready: false
+    },
     stageTwoBackground: {
       image: null,
       ready: false
@@ -614,6 +618,7 @@
     init() {
       this.canvas = document.getElementById('gameCanvas');
       this.ctx = this.canvas.getContext('2d');
+      this.preloadStageOneBackground();
       this.preloadStageTwoBackground();
       this.resize();
       window.addEventListener('resize', () => this.resize());
@@ -631,6 +636,18 @@
         requestAnimationFrame(loop);
       };
       requestAnimationFrame(loop);
+    },
+
+    preloadStageOneBackground() {
+      const image = new Image();
+      image.addEventListener('load', () => {
+        this.stageOneBackground.image = image;
+        this.stageOneBackground.ready = true;
+      });
+      image.addEventListener('error', () => {
+        this.stageOneBackground.ready = false;
+      });
+      image.src = './assets/morning-mist-pond.jpg';
     },
 
     preloadStageTwoBackground() {
@@ -1132,8 +1149,10 @@
       const ctx = this.ctx;
       ctx.clearRect(0, 0, this.width, this.height);
 
-      // 1. Stage 2 uses the local decorative river art; all other cases retain water.
-      if (this.journey.currentStage === 2 && this.stageTwoBackground.ready) {
+      // 1. Each stage uses its local decorative art when loaded; procedural water remains the fallback.
+      if (this.journey.currentStage === 1 && this.stageOneBackground.ready) {
+        this.drawStageOneMorningBackground(ctx);
+      } else if (this.journey.currentStage === 2 && this.stageTwoBackground.ready) {
         this.drawStageTwoStormBackground(ctx);
       } else {
         this.drawProceduralWater(ctx);
@@ -1222,8 +1241,15 @@
       }
     },
 
+    drawStageOneMorningBackground(ctx) {
+      this.drawViewportAnchoredBackground(ctx, this.stageOneBackground.image);
+    },
+
     drawStageTwoStormBackground(ctx) {
-      const image = this.stageTwoBackground.image;
+      this.drawViewportAnchoredBackground(ctx, this.stageTwoBackground.image);
+    },
+
+    drawViewportAnchoredBackground(ctx, image) {
       const viewportRatio = this.width / this.height;
       const imageRatio = image.naturalWidth / image.naturalHeight;
       let sourceX = 0;
