@@ -15,6 +15,8 @@ future design, implementation, and review work must preserve.
 - `demo/index.html`: active experimental game shell and runtime orchestrator.
 - `demo/src/input.js`: canonical input policy.
 - `demo/src/journey.js`: canonical journey milestone policy.
+- `demo/src/stage-transition.js`: canonical stage-transition timing and Canvas
+  overlay policy.
 - `demo/tests/`: Node behavior and structural regression tests.
 - `design-previews/`: untracked visual exploration, not runtime authority.
 - `WORK_PLAN.md`: project phase, acceptance, and execution protocol.
@@ -27,8 +29,7 @@ future design, implementation, and review work must preserve.
 - Verification authority: `demo/tests/` plus browser and real-device evidence.
 - Frozen V3.4 input baseline: commit `b232582`.
 - V3 acceptance documentation: commit `6ad94b9`.
-- Architecture decisions are currently recorded in plans and accepted code;
-  no prior ADR directory exists.
+- Lily wipe stage-transition decision: ADR 0001.
 
 ## 4. Product / Requirement Baseline
 
@@ -67,6 +68,8 @@ future design, implementation, and review work must preserve.
   Canvas rendering.
 - `FrogInput` owns input interpretation and gesture state.
 - `FrogJourney` owns stage milestone calculation and does not mutate run state.
+- `FrogStageTransition` owns map-transition timing, covered-swap phase
+  calculation, reduced-motion behavior, and Canvas transition overlay drawing.
 - Browser modules use a UMD-style global plus CommonJS export so Node tests can
   execute the same policy code.
 - Tests protect the immutable root and frozen baseline by SHA-256.
@@ -78,6 +81,8 @@ future design, implementation, and review work must preserve.
 3. Cosmetic randomness must not affect gameplay outcomes.
 4. Missing decorative assets may degrade visuals but must not block gameplay.
 5. The active game shell remains the sole runtime orchestrator.
+6. Every future map transition reuses the frozen lily-wipe pause and
+   covered-swap contract unless superseded by a new ADR.
 
 ### 5.3 Architecture Non-goals
 
@@ -94,6 +99,7 @@ future design, implementation, and review work must preserve.
 | Run state and runtime sequencing | `demo/index.html` |
 | Map row data and collision truth | `Game.rows` in `demo/index.html` |
 | Canvas draw order | `Game.render()` in `demo/index.html` |
+| Map transition timing and overlay | `demo/src/stage-transition.js` |
 | Acceptance status | `WORK_PLAN.md` |
 
 ## 7. Current State and Risks
@@ -102,6 +108,9 @@ future design, implementation, and review work must preserve.
 - `demo/index.html` is 1577 lines and has multiple reasons to change.
 - Gameplay generation still uses `Math.random()`; this is known V4 work.
 - Current theme rendering is one inline water fill and wave pass.
+- Stage 1 and Stage 2 use authorized local background assets.
+- The Stage 1 to Stage 2 lily wipe is accepted and frozen as the reusable
+  map-transition contract.
 - Current journey completion does not convert remaining resources into score.
 - Untracked `.DS_Store` files must never be committed.
 

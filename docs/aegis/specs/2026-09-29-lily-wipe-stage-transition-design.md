@@ -1,7 +1,7 @@
 # Lily Wipe Stage Transition Design
 
 Date: `2026-09-29`
-Status: `Approved by user`
+Status: `Accepted / Frozen reusable transition contract`
 Reference:
 `/Users/bytedance/Library/Application Support/TRAE SOLO CN/ModularData/ai-agent/work-mode-projects/6abb68f41f4e3e43aa383e3f/frog-mist-transition-demo/pages/mist-transition-demo.html`
 
@@ -9,6 +9,11 @@ Reference:
 
 Replace the abrupt Stage 1 to Stage 2 background swap with a Canvas-native
 giant-lily-pad wipe. Remove the rectangular crocodile warning outline.
+
+The user accepted the implementation and requested that all future map
+transitions reuse this contract. Refer to
+`docs/aegis/adr/0001-lily-wipe-stage-transition.md` for the durable owner and
+parameterization boundary.
 
 ## 2. Transition Contract
 
@@ -28,6 +33,10 @@ giant-lily-pad wipe. Remove the rectangular crocodile warning outline.
   unchanged. The next input may be accepted only after `PLAYING` resumes.
 - Reduced-motion mode skips the sweeping animation but still performs one
   deterministic covered switch and resumes safely.
+
+Future maps may vary the destination title, background pair, leaf palette, and
+non-interactive decorative accents only. They must not add a new transition
+state machine, pause model, or background-switch timing.
 
 ## 3. Ownership
 
