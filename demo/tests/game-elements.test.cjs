@@ -131,21 +131,20 @@ test('flower and bomb pickup retain their legacy operation order and stable geom
   assert.deepEqual(findOperation(bomb, 'lineTo'), ['lineTo', 6, -8]);
 });
 
-test('crocodile warning wake and body retain their legacy operation order and geometry', () => {
+test('crocodile body draws without a rectangular warning outline', () => {
   const croc = record((ctx) => {
     FrogGameElements.drawCrocodile(ctx, 60, 70, false);
   });
 
   assert.deepEqual(operationNames(croc), [
-    'save', 'translate', 'scale', 'set:strokeStyle', 'set:lineWidth', 'strokeRect',
-    'set:fillStyle', 'beginPath', 'roundRect', 'fill', 'set:fillStyle',
+    'save', 'translate', 'scale', 'set:fillStyle', 'beginPath', 'roundRect', 'fill', 'set:fillStyle',
     'beginPath', 'moveTo', 'lineTo', 'lineTo', 'fill',
     'beginPath', 'moveTo', 'lineTo', 'lineTo', 'fill',
     'beginPath', 'moveTo', 'lineTo', 'lineTo', 'fill',
     'beginPath', 'moveTo', 'lineTo', 'lineTo', 'fill',
     'set:fillStyle', 'beginPath', 'arc', 'fill', 'set:fillStyle', 'fillRect', 'restore'
   ]);
-  assert.deepEqual(findOperation(croc, 'strokeRect'), ['strokeRect', -25, -12, 50, 24]);
+  assert.equal(operationNames(croc).includes('strokeRect'), false);
   assert.deepEqual(findOperation(croc, 'roundRect'), ['roundRect', -22, -9, 44, 18, [8, 14, 14, 8]]);
   assert.deepEqual(findOperation(croc, 'arc'), ['arc', 10, -5, 3.5, 0, Math.PI * 2]);
 });

@@ -438,6 +438,7 @@
 <script src="./src/input.js"></script>
 <script src="./src/journey.js"></script>
 <script src="./src/game-elements.js"></script>
+<script src="./src/stage-transition.js"></script>
 <script>
 /**
  * 荷塘大冒险 (Frog Pond Adventure)
@@ -592,6 +593,7 @@
       image: null,
       ready: false
     },
+    stageTransition: null,
 
     // 实体集合
     frog: {
@@ -686,6 +688,7 @@
       this.targetCameraY = 0;
       this.jumpPreview = null;
       this.inputBuffer.clear();
+      this.stageTransition = null;
       this.rows.clear();
       this.crocodiles = [];
       this.particles = [];
@@ -825,6 +828,7 @@
     },
 
     showJumpPreview(dir, steps) {
+      if (this.state !== 'PLAYING') return;
       const target = this.getJumpTarget(dir, steps);
       this.jumpPreview = target ? { gridX: target.x, gridY: target.y } : null;
     },
@@ -966,14 +970,37 @@
       this.journey.currentStage = result.currentStage;
 
       if (result.event === 'STAGE_ADVANCED') {
-        sfx.playScore();
-        this.addFloatingText('第 2 段 · 鳄影深塘', this.width / 2, this.height * 0.38, '#ffb703');
+        this.startStageTransition();
       } else if (result.event === 'JOURNEY_COMPLETED') {
         this.gameOver('两段旅程完成！', true);
         return true;
       }
 
       return false;
+    },
+
+    startStageTransition() {
+      this.inputBuffer.clear();
+      this.clearJumpPreview();
+      this.stageTransition = FrogStageTransition.create({
+        startTime: performance.now(),
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      });
+      this.state = 'TRANSITIONING';
+    },
+
+    updateStageTransition() {
+      const transitionEvent = this.stageTransition.update(performance.now());
+      if (transitionEvent.switchStage) {
+        this.journey.currentStage = 2;
+        this.updateUI();
+      }
+      if (transitionEvent.completed) {
+        this.stageTransition = null;
+        this.state = 'PLAYING';
+        sfx.playScore();
+        this.addFloatingText('第 2 段 · 鳄影深塘', this.width / 2, this.height * 0.38, '#ffb703');
+      }
     },
 
     // 游戏结束
@@ -1012,6 +1039,10 @@
     },
 
     update(dt) {
+      if (this.state === 'TRANSITIONING') {
+        this.updateStageTransition();
+        return;
+      }
       if (this.state !== 'PLAYING') return;
 
       // 摄像机平滑跟随青蛙
@@ -1223,6 +1254,10 @@
         ctx.fillText(ft.text, ft.x, ft.y);
         ctx.restore();
       });
+
+      if (this.stageTransition) {
+        this.stageTransition.render(ctx, this.width, this.height);
+      }
     },
 
     drawProceduralWater(ctx) {

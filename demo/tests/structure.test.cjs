@@ -58,6 +58,43 @@ test('the demo delegates protected element drawing to the canonical library', ()
   assert.doesNotMatch(html, /\n\s*drawFrog\(/);
 });
 
+test('the demo owns the stage-transition lifecycle while the transition module owns timing and overlay rendering', () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
+
+  assert.match(html, /<script src="\.\/src\/stage-transition\.js"><\/script>/);
+  assert.match(html, /stageTransition:\s*null/);
+  assert.match(
+    html,
+    /this\.stageTransition = FrogStageTransition\.create\(\{\s*startTime: performance\.now\(\),\s*reducedMotion: window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\s*\}\);/
+  );
+  assert.match(html, /this\.state = 'TRANSITIONING';/);
+  assert.match(html, /const transitionEvent = this\.stageTransition\.update\(performance\.now\(\)\);/);
+  assert.match(html, /if \(transitionEvent\.switchStage\) \{\s*this\.journey\.currentStage = 2;/);
+  assert.match(
+    html,
+    /if \(transitionEvent\.completed\) \{[\s\S]*?this\.stageTransition = null;[\s\S]*?this\.state = 'PLAYING';/
+  );
+  assert.match(html, /this\.stageTransition\.render\(ctx, this\.width, this\.height\);/);
+
+  const entityIndex = html.indexOf('FrogGameElements.drawFrog(ctx, this.frog);');
+  const overlayIndex = html.indexOf('this.stageTransition.render(ctx, this.width, this.height);');
+  assert.ok(entityIndex >= 0 && overlayIndex > entityIndex);
+});
+
+test('the transition boundary pauses input, timer, camera, crocodiles, sinks, and buffered jumps', () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
+
+  assert.match(html, /if \(this\.state === 'TRANSITIONING'\) \{\s*this\.updateStageTransition\(\);\s*return;\s*\}/);
+  assert.match(html, /if \(this\.state !== 'PLAYING' \|\| !this\.frog\.alive\) return;/);
+  assert.match(html, /if \(this\.state !== 'PLAYING' \|\| this\.bombs <= 0\) return;/);
+  assert.match(html, /if \(this\.state === 'PLAYING'\) \{\s*this\.timeLeft--;/);
+  assert.match(
+    html,
+    /this\.inputBuffer\.clear\(\);[\s\S]*?this\.stageTransition = FrogStageTransition\.create/
+  );
+  assert.match(html, /if \(this\.state === 'PLAYING' && this\.frog\.alive && nextJump\)/);
+});
+
 test('the Stage 1 morning background remains a local authorized asset', () => {
   const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
 

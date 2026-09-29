@@ -118,17 +118,10 @@
     ctx.restore();
   }
 
-  function drawWarningWake(ctx) {
-    ctx.strokeStyle = 'rgba(230, 57, 70, 0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(-25, -12, 50, 24);
-  }
-
   function drawCrocodile(ctx, x, y, goingRight) {
     ctx.save();
     ctx.translate(x, y);
     if (!goingRight) ctx.scale(-1, 1);
-    drawWarningWake(ctx);
     ctx.fillStyle = '#1e441e';
     ctx.beginPath();
     ctx.roundRect(-22, -9, 44, 18, [8, 14, 14, 8]);
@@ -245,7 +238,6 @@
     drawFlower,
     drawGoldenLotus,
     drawBombPickup,
-    drawWarningWake,
     drawCrocodile,
     drawFrog,
     drawJumpPreview
