@@ -7,6 +7,14 @@ const path = require('node:path');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const expectedBaselineHash =
   '00a079310d941c0238b8dca505811369ef1448b0e60c80088ffccca353f830bd';
+const stageTwoBackgroundPath = path.join(
+  repoRoot,
+  'demo',
+  'assets',
+  'storm-deep-lake-river.jpg'
+);
+const expectedStageTwoBackgroundHash =
+  'aadac9b9483900e66b71c4513e6b16115e59532c86002dec37de85f0527b35d5';
 
 test('the authoritative root and frozen demo baseline remain unchanged', () => {
   assert.equal(hashFile(path.join(repoRoot, 'index.html')), expectedBaselineHash);
@@ -40,6 +48,29 @@ test('the demo delegates protected element drawing to the canonical library', ()
   assert.doesNotMatch(html, /\n\s*drawBombItem\(/);
   assert.doesNotMatch(html, /\n\s*drawCrocodile\(/);
   assert.doesNotMatch(html, /\n\s*drawFrog\(/);
+});
+
+test('the Stage 2 storm background remains a local authorized asset', () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
+
+  assert.equal(hashFile(stageTwoBackgroundPath), expectedStageTwoBackgroundHash);
+  assert.match(html, /const image = new Image\(\)/);
+  assert.match(html, /image\.src = '\.\/assets\/storm-deep-lake-river\.jpg'/);
+  assert.doesNotMatch(html, /image\.src = ['"]https?:\/\//);
+});
+
+test('Stage 2 draws its loaded background before entities and falls back to procedural water', () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'demo', 'index.html'), 'utf8');
+  const stageBackgroundIndex = html.indexOf('this.drawStageTwoStormBackground(ctx);');
+  const firstEntityIndex = html.indexOf('FrogGameElements.drawLilyPad(');
+
+  assert.match(
+    html,
+    /if \(this\.journey\.currentStage === 2 && this\.stageTwoBackground\.ready\) \{\s*this\.drawStageTwoStormBackground\(ctx\);\s*\} else \{\s*this\.drawProceduralWater\(ctx\);\s*\}/
+  );
+  assert.match(html, /image\.addEventListener\('error', \(\) => \{\s*this\.stageTwoBackground\.ready = false;/);
+  assert.match(html, /ctx\.drawImage\(\s*image,[\s\S]*?this\.width,\s*this\.height\s*\)/);
+  assert.ok(stageBackgroundIndex >= 0 && stageBackgroundIndex < firstEntityIndex);
 });
 
 test('the demo inline script parses as JavaScript', () => {

@@ -584,6 +584,10 @@
     targetCameraY: 0,
     jumpPreview: null,
     inputBuffer: FrogInput.createSingleInputBuffer(),
+    stageTwoBackground: {
+      image: null,
+      ready: false
+    },
 
     // 实体集合
     frog: {
@@ -610,6 +614,7 @@
     init() {
       this.canvas = document.getElementById('gameCanvas');
       this.ctx = this.canvas.getContext('2d');
+      this.preloadStageTwoBackground();
       this.resize();
       window.addEventListener('resize', () => this.resize());
 
@@ -626,6 +631,18 @@
         requestAnimationFrame(loop);
       };
       requestAnimationFrame(loop);
+    },
+
+    preloadStageTwoBackground() {
+      const image = new Image();
+      image.addEventListener('load', () => {
+        this.stageTwoBackground.image = image;
+        this.stageTwoBackground.ready = true;
+      });
+      image.addEventListener('error', () => {
+        this.stageTwoBackground.ready = false;
+      });
+      image.src = './assets/storm-deep-lake-river.jpg';
     },
 
     resize() {
@@ -1115,19 +1132,11 @@
       const ctx = this.ctx;
       ctx.clearRect(0, 0, this.width, this.height);
 
-      // 1. 水面背景与微波
-      ctx.fillStyle = '#1b4965';
-      ctx.fillRect(0, 0, this.width, this.height);
-
-      // 绘制水波纹流动效果
-      ctx.strokeStyle = 'rgba(98, 182, 203, 0.18)';
-      ctx.lineWidth = 2;
-      const waveOffset = (Date.now() * 0.02) % 40;
-      for (let y = -40 + waveOffset; y < this.height; y += 38) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.bezierCurveTo(this.width * 0.33, y + 10, this.width * 0.66, y - 10, this.width, y);
-        ctx.stroke();
+      // 1. Stage 2 uses the local decorative river art; all other cases retain water.
+      if (this.journey.currentStage === 2 && this.stageTwoBackground.ready) {
+        this.drawStageTwoStormBackground(ctx);
+      } else {
+        this.drawProceduralWater(ctx);
       }
 
       // 2. 绘制荷叶网格
@@ -1195,6 +1204,52 @@
         ctx.fillText(ft.text, ft.x, ft.y);
         ctx.restore();
       });
+    },
+
+    drawProceduralWater(ctx) {
+      ctx.fillStyle = '#1b4965';
+      ctx.fillRect(0, 0, this.width, this.height);
+
+      // 绘制水波纹流动效果
+      ctx.strokeStyle = 'rgba(98, 182, 203, 0.18)';
+      ctx.lineWidth = 2;
+      const waveOffset = (Date.now() * 0.02) % 40;
+      for (let y = -40 + waveOffset; y < this.height; y += 38) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.bezierCurveTo(this.width * 0.33, y + 10, this.width * 0.66, y - 10, this.width, y);
+        ctx.stroke();
+      }
+    },
+
+    drawStageTwoStormBackground(ctx) {
+      const image = this.stageTwoBackground.image;
+      const viewportRatio = this.width / this.height;
+      const imageRatio = image.naturalWidth / image.naturalHeight;
+      let sourceX = 0;
+      let sourceY = 0;
+      let sourceWidth = image.naturalWidth;
+      let sourceHeight = image.naturalHeight;
+
+      if (imageRatio > viewportRatio) {
+        sourceWidth = image.naturalHeight * viewportRatio;
+        sourceX = (image.naturalWidth - sourceWidth) / 2;
+      } else {
+        sourceHeight = image.naturalWidth / viewportRatio;
+        sourceY = (image.naturalHeight - sourceHeight) / 2;
+      }
+
+      ctx.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        this.width,
+        this.height
+      );
     },
 
     updateUI() {
